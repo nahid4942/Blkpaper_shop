@@ -5,18 +5,23 @@
 
 // ===== GLOBAL VARIABLES =====
 let isLoading = true;
-let cart = JSON.parse(localStorage.getItem('blkpaper_cart')) || [];
+let cart = (JSON.parse(localStorage.getItem('blkpaper_cart')) || []).map(i => ({ ...i, key: i.key || i.id }));
 let products = [];
 let currentFilter = 'all';
 let searchQuery = '';
 let isSearchOpen = false;
 let isCartOpen = false;
 let isMobileMenuOpen = false;
+let STORE = null;
+let selectedSize = null;
+let appliedCoupon = null;
+try { appliedCoupon = JSON.parse(localStorage.getItem('blkpaper_coupon')); } catch (e) { appliedCoupon = null; }
+if (appliedCoupon && !appliedCoupon.type) appliedCoupon = null;
 
 // Google Sheets Configuration
 const GOOGLE_SHEETS_CONFIG = {
-    // Google Apps Script Web App URL (provided)
-    scriptURL: 'https://script.google.com/macros/s/AKfycbyUy-myOKQB52KazuDNhE5tm24doJfQ_FVVvffT0CltGHY1v26PQOxB8AuemQ_MoeqWYw/exec',
+    // Replace with your Google Apps Script Web App URL
+    scriptURL: 'https://script.google.com/macros/s/AKfycbwjMwrf4Kl25HJEiQirL4wJD5LoaDW-BjIhVpEg9_6DqXa27rIsu33jAWHzVTJJNfP0jg/exec',
     
     // Backup email for order notifications (optional)
     backupEmail: 'blkpaper399@gmail.com'
@@ -29,162 +34,81 @@ const productData = [
         id: 'memory-band-001',
         name: 'Memory Band Classic',
         category: 'memory-band',
-        price: 1500,
-        originalPrice: 1800,
-        image: 'wnb/m1p1.png',
+        price: 2500,
+        originalPrice: 3000,
+        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Revolutionary memory storage device with premium design and smart technology.',
         featured: true,
         inStock: true,
-        rating: 0,
-        reviews: 0
+        rating: 5,
+        reviews: 124
     },
     
     // Clothing
     {
         id: 'clothing-001',
-        name: 'BLKPAPER   ash acid-wash Urban Hoodie',
+        name: 'BLKPAPER Urban Hoodie',
         category: 'clothing',
-        price: 820,
-        originalPrice: 1000,
-        images: [
-            'clothing/h1p1.png',
-            'clothing/h1p2.png'
-        ],
+        price: 1800,
+        originalPrice: 2200,
+        image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Premium cotton hoodie with minimalist design and comfortable fit.',
-        eco: true,
         featured: false,
         inStock: true,
-        rating: 4.0,
-        reviews: 5
+        rating: 4.8,
+        reviews: 89
     },
     {
         id: 'clothing-002',
-        name: 'BLKPAPER   black acid-wash Urban Hoodie',
+        name: 'Minimalist Black Tee',
         category: 'clothing',
-        price: 820,
-        originalPrice: 1000,
-        images: [
-            'clothing/h2p1.png',
-            'clothing/h2p2.png',
-            'clothing/sc.png'
-        ],
+        price: 1200,
+        originalPrice: null,
+        image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Essential black t-shirt with premium fabric and perfect cut.',
         featured: false,
         inStock: true,
         rating: 4.7,
-        reviews: 4
+        reviews: 156
     },
     {
         id: 'clothing-003',
-        name: 'Street Style acid wash hoodie ',
+        name: 'Street Style Jacket',
         category: 'clothing',
-        price: 820,
-        originalPrice: 1200,
-        images: [
-            'clothing/h3p1.png',
-            'clothing/h3p2.png',
-            'clothing/sc.png'
-        ],
-        description: 'Trendy street style hoodie with durable material and modern fit.',
+        price: 3500,
+        originalPrice: 4000,
+        image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        description: 'Urban jacket with modern cut and weather-resistant fabric.',
         featured: true,
         inStock: true,
         rating: 4.9,
-        reviews: 4
+        reviews: 67
     },
     {
         id: 'clothing-004',
         name: 'Cargo Pants - Black',
         category: 'clothing',
-        price: 700,
+        price: 2200,
         originalPrice: null,
-        image: 'clothing/bp1p1.png',
+        image: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Functional cargo pants with multiple pockets and modern silhouette.',
         featured: false,
         inStock: true,
         rating: 4.6,
-        reviews: 3
+        reviews: 92
     },
     {
         id: 'clothing-005',
         name: 'Oversized Sweatshirt',
         category: 'clothing',
-        price: 640,
-        originalPrice: 800,
-        image: 'clothing/s1p1.png',
+        price: 2000,
+        originalPrice: 2400,
+        image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Comfortable oversized sweatshirt perfect for casual wear.',
         featured: false,
         inStock: false,
         rating: 4.5,
-        reviews: 5
-    },
-    {
-        id: 'clothing-006',
-        name: 'Oversized Sweatshirt',
-        category: 'clothing',
-        price: 640,
-        originalPrice: 800,
-        images: [
-            'clothing/h1p1.png',
-            'clothing/h1p2.png',
-            'clothing/sc.png'
-        ],
-        description: 'Comfortable oversized sweatshirt perfect for casual wear.',
-        featured: false,
-        inStock: false,
-        rating: 4.5,
-        reviews: 3
-    },
-    {
-        id: 'clothing-007',
-        name: 'f1 x blkpaper acid-wash hoodie',
-        category: 'clothing',
-        price: 1000,
-        originalPrice: 1200,
-        images: [
-            'clothing/h7n1.png',
-            'clothing/h7n2.png',
-            'clothing/sc.png'
-        ],
-        description: 'f1 x blkpaper acid-wash hoodie with comfortable fit and unique design.',
-        featured: true,
-        inStock: true,
-        rating: 4.5,
-        reviews: 4
-    },
-    {
-        id: 'clothing-008',
-        name: 'oni black acid-wash hoodie',
-        category: 'clothing',
-        price: 1000,
-        originalPrice: 1200,
-        image: [
-            'clothing/h8n1.png',
-            'clothing/h8n2.png',
-            'clothing/sc.png'
-
-        ],
-        description: 'oni black acid-wash hoodie with comfortable fit and unique design.',
-        featured: false,
-        inStock: true,
-        rating: 4.5,
-        reviews: 2
-    },
-    {
-        id: 'clothing-009',
-        name: 'f1 x blkpaper  Redbull acid-wash hoodie',
-        category: 'clothing',
-        price: 1000,
-        originalPrice: 1200,
-        image: [
-            'clothing/h9n1.png',
-            'clothing/h9n2.png'
-            ,'clothing/sc.png'
-        ],
-        description: 'Comfortable oversized sweatshirt perfect for casual wear.',
-        featured: false,
-        inStock: true,
-        rating: 4.5,
-        reviews: 3
+        reviews: 73
     },
     
     // Sunglasses
@@ -199,7 +123,7 @@ const productData = [
         featured: false,
         inStock: true,
         rating: 4.8,
-        reviews: 1
+        reviews: 112
     },
     {
         id: 'sunglasses-002',
@@ -211,8 +135,8 @@ const productData = [
         description: 'Vintage-inspired round sunglasses with modern lens technology.',
         featured: false,
         inStock: true,
-        rating: 0,
-        reviews: 0
+        rating: 4.6,
+        reviews: 85
     },
     {
         id: 'sunglasses-003',
@@ -224,8 +148,8 @@ const productData = [
         description: 'Bold square-frame sunglasses for statement style.',
         featured: true,
         inStock: true,
-        rating: 0,
-        reviews: 0
+        rating: 4.7,
+        reviews: 94
     },
     
     // Accessories
@@ -235,18 +159,12 @@ const productData = [
         category: 'accessories',
         price: 800,
         originalPrice: 1000,
-        image: [
-            'wnb/w1p1.png',
-            'wnb/w1p2.png',
-            'wnb/w1p3.png',
-            'wnb/w1p4.png'
-
-        ],
+        image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Premium leather wallet with multiple card slots and coin pocket.',
         featured: false,
         inStock: true,
         rating: 4.9,
-        reviews: 2
+        reviews: 203
     },
     {
         id: 'accessories-002',
@@ -254,17 +172,12 @@ const productData = [
         category: 'accessories',
         price: 2800,
         originalPrice: 3200,
-        image: [
-            'wnb/wt1p1.png',
-            'wnb/wt1p2.png',
-            
-
-        ],
+        image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Sleek minimalist watch with black leather strap.',
         featured: true,
         inStock: true,
-        rating: 0,
-        reviews: 0
+        rating: 4.8,
+        reviews: 156
     },
     {
         id: 'accessories-003',
@@ -274,11 +187,10 @@ const productData = [
         originalPrice: null,
         image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Durable canvas messenger bag perfect for daily use.',
-        eco: true,
         featured: false,
-        inStock: false,
+        inStock: true,
         rating: 4.5,
-        reviews: 2
+        reviews: 78
     },
     {
         id: 'accessories-004',
@@ -289,25 +201,489 @@ const productData = [
         image: 'https://images.unsplash.com/photo-1576871337622-98d48d1cf531?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Comfortable knit beanie for casual streetwear looks.',
         featured: false,
-        inStock: false,
-        rating: 0,
-        reviews: 0
+        inStock: true,
+        rating: 4.4,
+        reviews: 167
     },
     {
         id: 'accessories-005',
         name: 'Phone Case - Matte Black',
         category: 'accessories',
-        price: 300,
-        originalPrice: 400,
+        price: 400,
+        originalPrice: 500,
         image: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
         description: 'Protective phone case with minimalist design.',
-        eco: true,
         featured: false,
         inStock: true,
-        rating: 0,
-        reviews: 0
+        rating: 4.3,
+        reviews: 234
     }
 ];
+
+
+// ===== STORE DATA LAYER (controlled by the hidden admin panel) =====
+// All shop data lives in Supabase. A cached copy gives an instant first paint; built-in defaults are only used in demo mode (no Supabase keys).
+
+const DEFAULT_SETTINGS = {
+    shippingFee: 100,
+    freeShippingOver: 0,          // 0 = free shipping off
+    announcementOn: false,
+    announcement: '',
+    heroOffer: '20% OFF on First Purchase',
+    whatsapp: '8801700000000',
+    phone: '01577030164',
+    email: 'blkpaper399@gmail.com',
+    address: 'sector#6,uttara,Dhaka,Bangladesh',
+    sizeOptions: ['S', 'M', 'L', 'XL', 'XXL'],
+    lowStockAt: 3
+};
+
+const DEFAULT_SALE = {
+    enabled: false,
+    name: 'Flash Sale',
+    percent: 10,
+    category: 'all',
+    start: '',
+    end: '',
+    banner: ''
+};
+
+const DEFAULT_COUPONS = [
+    { code: 'FIRST20', type: 'percent', value: 20, minOrder: 0, expires: '', active: true, note: 'First purchase offer' }
+];
+
+function buildDefaultProducts() {
+    return productData.map(p => {
+        const sized = p.category === 'clothing';
+        const discount = p.originalPrice && p.originalPrice > p.price
+            ? { type: 'fixed', value: p.originalPrice - p.price }
+            : null;
+        return {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: p.originalPrice && p.originalPrice > p.price ? p.originalPrice : p.price,
+            discount: discount,
+            image: p.image,
+            description: p.description,
+            featured: !!p.featured,
+            active: true,
+            rating: p.rating,
+            reviews: p.reviews,
+            sizes: sized ? { S: p.inStock ? 10 : 0, M: p.inStock ? 10 : 0, L: p.inStock ? 10 : 0, XL: p.inStock ? 10 : 0 } : null,
+            stock: sized ? 0 : (p.inStock ? 20 : 0)
+        };
+    });
+}
+
+function normalizeStore(s) {
+    s = s || {};
+    return {
+        updatedAt: s.updatedAt || 0,
+        settings: Object.assign({}, DEFAULT_SETTINGS, s.settings || {}),
+        sale: Object.assign({}, DEFAULT_SALE, s.sale || {}),
+        coupons: Array.isArray(s.coupons) ? s.coupons : JSON.parse(JSON.stringify(DEFAULT_COUPONS)),
+        products: Array.isArray(s.products) ? s.products : buildDefaultProducts()
+    };
+}
+
+function escAttr(str) {
+    return String(str == null ? '' : str).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function parseStoreDate(str, endOfDay) {
+    if (!str) return null;
+    const d = new Date(str);
+    if (isNaN(d)) return null;
+    if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(str)) d.setHours(23, 59, 59, 999);
+    return d;
+}
+
+function getSaleStatus(sale) {
+    if (!sale || !sale.enabled) return 'off';
+    const now = new Date();
+    const start = parseStoreDate(sale.start);
+    const end = parseStoreDate(sale.end, true);
+    if (start && now < start) return 'scheduled';
+    if (end && now > end) return 'expired';
+    return 'active';
+}
+
+function isSaleActive(sale) {
+    return getSaleStatus(sale) === 'active';
+}
+
+function computePricing(sp) {
+    const regular = Number(sp.price) || 0;
+    let best = 0;
+    let fromSale = false;
+    const d = sp.discount;
+    if (d && Number(d.value) > 0) {
+        best = d.type === 'percent' ? Math.round(regular * Number(d.value) / 100) : Number(d.value);
+    }
+    const sale = STORE.sale;
+    if (isSaleActive(sale) && (sale.category === 'all' || sale.category === sp.category)) {
+        const s = Math.round(regular * (Number(sale.percent) || 0) / 100);
+        if (s > best) { best = s; fromSale = true; }
+    }
+    best = Math.max(0, Math.min(best, regular));
+    return { price: regular - best, originalPrice: best > 0 ? regular : null, fromSale: fromSale };
+}
+
+// Postgres JSON doesn't keep key order, so sizes are always sorted: your size options first, then S/M/L…, then numbers
+function sortSizeKeys(keys) {
+    const order = (STORE && STORE.settings && STORE.settings.sizeOptions) || [];
+    const std = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+    const rank = (k) => {
+        let i = order.indexOf(k);
+        if (i >= 0) return [0, i, ''];
+        i = std.indexOf(String(k).toUpperCase());
+        if (i >= 0) return [1, i, ''];
+        const n = parseFloat(k);
+        if (!isNaN(n)) return [2, n, ''];
+        return [3, 0, String(k)];
+    };
+    return keys.slice().sort((a, b) => {
+        const ra = rank(a), rb = rank(b);
+        return ra[0] - rb[0] || ra[1] - rb[1] || ra[2].localeCompare(rb[2]);
+    });
+}
+
+function toShopProduct(sp) {
+    const pr = computePricing(sp);
+    const hasSizes = sp.sizes && Object.keys(sp.sizes).length > 0;
+    const sizes = hasSizes ? {} : null;
+    let stock = 0;
+    if (hasSizes) {
+        sortSizeKeys(Object.keys(sp.sizes)).forEach(k => {
+            const q = Math.max(0, parseInt(sp.sizes[k]) || 0);
+            sizes[k] = q;
+            stock += q;
+        });
+    } else {
+        stock = Math.max(0, parseInt(sp.stock) || 0);
+    }
+    return {
+        id: sp.id,
+        name: escAttr(sp.name),
+        category: sp.category,
+        description: escAttr(sp.description || ''),
+        image: sp.image || '',
+        featured: !!sp.featured,
+        rating: Number(sp.rating) || 5,
+        reviews: Number(sp.reviews) || 0,
+        price: pr.price,
+        originalPrice: pr.originalPrice,
+        onSale: pr.fromSale,
+        sizes: sizes,
+        stock: stock,
+        inStock: stock > 0
+    };
+}
+
+function rebuildProducts() {
+    products = STORE.products.filter(p => p.active !== false).map(toShopProduct);
+    syncCartWithStore();
+}
+
+// ----- Supabase connection -----
+let sb = null;
+let storeLoading = false;
+let refreshing = false, refreshAgain = false, refreshTimer = null;
+const STORE_CACHE_KEY = 'blkpaper_store_cache';
+const storeListeners = [];
+
+function initSupabase() {
+    const cfg = window.BLK_SUPABASE || {};
+    if (!cfg.url || !cfg.anonKey || !window.supabase || !window.supabase.createClient) return null;
+    try { return window.supabase.createClient(cfg.url, cfg.anonKey); } catch (e) { return null; }
+}
+
+function rowToProduct(r) {
+    return {
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        price: Number(r.price) || 0,
+        discount: r.discount_type ? { type: r.discount_type, value: Number(r.discount_value) || 0 } : null,
+        image: r.image_url || '',
+        description: r.description || '',
+        featured: !!r.featured,
+        active: r.active !== false,
+        rating: Number(r.rating) || 0,
+        reviews: Number(r.reviews) || 0,
+        sizes: r.sizes && Object.keys(r.sizes).length ? r.sizes : null,
+        stock: parseInt(r.stock) || 0
+    };
+}
+
+async function fetchStoreFromServer() {
+    const [pr, st] = await Promise.all([
+        sb.from('products').select('*').order('sort_order', { ascending: false }),
+        sb.from('settings').select('key,value')
+    ]);
+    if (pr.error) throw pr.error;
+    if (st.error) throw st.error;
+    const get = (k) => { const r = (st.data || []).find(x => x.key === k); return r ? r.value : {}; };
+    return normalizeStore({ products: (pr.data || []).map(rowToProduct), settings: get('store'), sale: get('sale'), coupons: [] });
+}
+
+function loadStore() {
+    sb = initSupabase();
+    window.BLKSB = sb;
+    if (!sb) {                       // demo mode: Supabase keys not filled in yet
+        STORE = normalizeStore({});
+        rebuildProducts();
+        applyStoreToPage();
+        return;
+    }
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem(STORE_CACHE_KEY)); } catch (e) { cached = null; }
+    if (cached && Array.isArray(cached.products)) {
+        STORE = normalizeStore(cached);
+        storeLoading = false;
+    } else {
+        STORE = normalizeStore({ products: [] });
+        storeLoading = true;
+    }
+    rebuildProducts();
+    applyStoreToPage();
+    refreshFromServer();
+    startRealtime();
+}
+
+async function refreshFromServer(quiet) {
+    if (!sb) return;
+    if (refreshing) { refreshAgain = true; return; }
+    refreshing = true;
+    try {
+        const fresh = await fetchStoreFromServer();
+        STORE = fresh;
+        storeLoading = false;
+        try { localStorage.setItem(STORE_CACHE_KEY, JSON.stringify(fresh)); } catch (e) { /* cache is optional */ }
+        const before = JSON.stringify(cart);
+        rebuildProducts();
+        applyStoreToPage();
+        displayProducts(Math.max(8, document.querySelectorAll('.product-card').length));
+        updateCartUI();
+        updateCartItems();
+        if (!quiet && JSON.stringify(cart) !== before) showToast('Your cart was updated to match the latest prices and stock', 'info');
+        storeListeners.forEach(fn => { try { fn(STORE); } catch (e) { /* ignore listener errors */ } });
+    } catch (e) {
+        console.warn('Could not load shop data:', e);
+        if (storeLoading) {
+            storeLoading = false;
+            displayProducts(8);
+            showToast('Could not connect to the shop. Please refresh the page.', 'error');
+        }
+    } finally {
+        refreshing = false;
+        if (refreshAgain) { refreshAgain = false; refreshFromServer(); }
+    }
+}
+
+function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshFromServer, 350);
+}
+
+// Live shopping: stock, prices and offers update on screen the moment they change
+function startRealtime() {
+    try {
+        sb.channel('blk-live')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, scheduleRefresh)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, scheduleRefresh)
+            .subscribe();
+    } catch (e) { console.warn('Realtime unavailable', e); }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshFromServer(); });
+    setInterval(() => { if (!document.hidden) refreshFromServer(); }, 120000);   // safety net
+}
+
+window.BLKPAPER_getStore = () => STORE;
+window.BLKStore = {
+    client: () => sb,
+    get: () => STORE,
+    refresh: () => refreshFromServer(),
+    onChange: (fn) => { storeListeners.push(fn); }
+};
+
+function applyStoreToPage() {
+    const s = STORE.settings;
+
+    // Announcement bar (sale banner wins while a sale is running)
+    const bar = document.getElementById('announcementBar');
+    let text = '';
+    if (isSaleActive(STORE.sale) && STORE.sale.banner) text = STORE.sale.banner;
+    else if (s.announcementOn && s.announcement) text = s.announcement;
+    if (bar) {
+        bar.style.display = text ? 'flex' : 'none';
+        const span = bar.querySelector('span');
+        if (span) span.textContent = text;
+        document.body.classList.toggle('has-announcement', !!text);
+    }
+
+    // Hero offer badge
+    const offerWrap = document.querySelector('.hero-offer');
+    const offerText = document.querySelector('.hero-offer .offer-badge span');
+    if (offerWrap && offerText) {
+        offerText.textContent = s.heroOffer || '';
+        offerWrap.style.display = s.heroOffer ? '' : 'none';
+    }
+
+    // Contact details + WhatsApp
+    document.querySelectorAll('[data-store]').forEach(el => {
+        const v = s[el.getAttribute('data-store')];
+        if (v) el.textContent = v;
+    });
+    const wa = document.querySelector('.whatsapp-float a');
+    if (wa && s.whatsapp) wa.href = 'https://wa.me/' + String(s.whatsapp).replace(/\D/g, '');
+
+    // Real item counts on category cards
+    document.querySelectorAll('.category-card').forEach(card => {
+        const cat = card.getAttribute('data-category');
+        const n = products.filter(p => p.category === cat).length;
+        const el = card.querySelector('.category-count');
+        if (el) el.textContent = n + (n === 1 ? ' item' : ' items');
+    });
+
+    // Memory Band feature block follows the first Memory Band product
+    const mbSection = document.getElementById('memory-band');
+    const mb = products.find(p => p.category === 'memory-band');
+    if (mbSection) {
+        mbSection.style.display = mb ? '' : 'none';
+        if (mb) {
+            const priceEl = document.getElementById('mbPrice');
+            const origEl = document.getElementById('mbOriginal');
+            const discEl = document.getElementById('mbDiscount');
+            const imgEl = document.querySelector('.memory-band-img');
+            const btn = document.getElementById('mbAddBtn');
+            if (priceEl) priceEl.textContent = '৳' + mb.price.toLocaleString();
+            const pct = mb.originalPrice ? Math.round(((mb.originalPrice - mb.price) / mb.originalPrice) * 100) : 0;
+            if (origEl) { origEl.textContent = mb.originalPrice ? '৳' + mb.originalPrice.toLocaleString() : ''; origEl.style.display = mb.originalPrice ? '' : 'none'; }
+            if (discEl) { discEl.textContent = pct + '% OFF'; discEl.style.display = pct > 0 ? '' : 'none'; }
+            if (imgEl && mb.image) imgEl.src = mb.image;
+            if (btn) {
+                btn.setAttribute('onclick', `addToCart('${mb.id}')`);
+                btn.disabled = !mb.inStock;
+                btn.lastChild.textContent = mb.inStock ? ' Add to Cart' : ' Out of Stock';
+            }
+        }
+    }
+}
+
+// ===== COUPONS & TOTALS =====
+function couponDiscount(c, subtotal) {
+    if (!c || subtotal <= 0 || subtotal < (Number(c.minOrder) || 0)) return 0;
+    const val = Number(c.value) || 0;
+    return c.type === 'percent' ? Math.round(subtotal * val / 100) : Math.min(val, subtotal);
+}
+
+function calcTotals() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discount = appliedCoupon ? couponDiscount(appliedCoupon, subtotal) : 0;
+    const s = STORE.settings;
+    let shipping = subtotal > 0 ? (Number(s.shippingFee) || 0) : 0;
+    const freeOver = Number(s.freeShippingOver) || 0;
+    if (subtotal > 0 && freeOver > 0 && (subtotal - discount) >= freeOver) shipping = 0;
+    return { subtotal: subtotal, discount: discount, shipping: shipping, total: subtotal - discount + shipping };
+}
+
+async function applyCouponFromInput() {
+    const input = document.getElementById('couponInput');
+    const code = input ? input.value.trim() : '';
+    if (!code) { showToast('Enter a coupon code', 'warning'); return; }
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    if (subtotal <= 0) { showToast('Add items to your cart first', 'warning'); return; }
+
+    let coupon = null;
+    if (sb) {
+        try {
+            const { data, error } = await sb.rpc('get_coupon', { p_code: code });
+            if (error) throw error;
+            coupon = data;
+        } catch (e) {
+            showToast('Could not check the coupon. Please try again.', 'error');
+            return;
+        }
+    } else {
+        const c = (STORE.coupons || []).find(x => String(x.code).toUpperCase() === code.toUpperCase() && x.active !== false);
+        if (c) coupon = { code: c.code, type: c.type, value: c.value, minOrder: c.minOrder };
+    }
+    if (!coupon) { showToast('Invalid or expired coupon code', 'error'); return; }
+    const min = Number(coupon.minOrder) || 0;
+    if (subtotal < min) { showToast(`Add ৳${(min - subtotal).toLocaleString()} more to use this coupon (min ৳${min.toLocaleString()})`, 'warning'); return; }
+    appliedCoupon = coupon;
+    localStorage.setItem('blkpaper_coupon', JSON.stringify(appliedCoupon));
+    if (input) input.value = '';
+    updateCartUI();
+    showToast(`Coupon ${coupon.code} applied!`, 'success');
+}
+
+function removeCoupon() {
+    appliedCoupon = null;
+    localStorage.removeItem('blkpaper_coupon');
+    updateCartUI();
+}
+
+// Keep saved carts valid when prices/stock change in the admin panel
+function syncCartWithStore() {
+    if (storeLoading) return false;   // product list not loaded yet — don't touch the saved cart
+    let changed = false;
+    cart = cart.filter(item => {
+        if (!item.key) item.key = item.id;
+        const p = products.find(x => x.id === item.id);
+        if (!p) { changed = true; return false; }
+        let available = p.stock;
+        if (p.sizes) {
+            if (!item.size || !(item.size in p.sizes)) { changed = true; return false; }
+            available = p.sizes[item.size];
+        }
+        if (available <= 0) { changed = true; return false; }
+        if (item.quantity > available) { item.quantity = available; changed = true; }
+        item.price = p.price;
+        item.name = p.name;
+        item.image = p.image;
+        return true;
+    });
+    if (changed || cart.length) localStorage.setItem('blkpaper_cart', JSON.stringify(cart));
+    return changed;
+}
+
+// ===== HIDDEN ADMIN PANEL LOADER =====
+// admin.js (one file: logic + styles) is only downloaded when the admin asks for it.
+function openAdminPanel() {
+    if (window.BLKAdmin) { window.BLKAdmin.open(); return; }
+    if (window.__blkAdminLoading) return;
+    window.__blkAdminLoading = true;
+    const js = document.createElement('script');
+    js.src = 'admin.js';
+    js.onload = () => { window.__blkAdminLoading = false; if (window.BLKAdmin) window.BLKAdmin.open(); };
+    js.onerror = () => { window.__blkAdminLoading = false; };
+    document.body.appendChild(js);
+}
+
+function initializeAdminTriggers() {
+    // 1) open the site with #admin at the end of the address
+    if (location.hash === '#admin') openAdminPanel();
+    window.addEventListener('hashchange', () => { if (location.hash === '#admin') openAdminPanel(); });
+
+    // 2) keyboard: Alt + Shift + A
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && e.shiftKey && e.code === 'KeyA') { e.preventDefault(); openAdminPanel(); }
+    });
+
+    // 3) tap the footer copyright line 5 times quickly (works on phones)
+    const trigger = document.querySelector('.footer-bottom-content p');
+    if (trigger) {
+        let taps = 0, timer = null;
+        trigger.addEventListener('click', () => {
+            taps++;
+            clearTimeout(timer);
+            timer = setTimeout(() => { taps = 0; }, 2500);
+            if (taps >= 5) { taps = 0; openAdminPanel(); }
+        });
+    }
+}
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
@@ -316,8 +692,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeWebsite() {
-    // Set products data
-    products = productData;
+    // Load store data (published file / admin draft / defaults)
+    loadStore();
+    initializeAdminTriggers();
     
     // Initialize loading screen
     initializeLoadingScreen();
@@ -345,9 +722,6 @@ function initializeWebsite() {
     
     // Initialize scroll effects
     initializeScrollEffects();
-    
-    // Initialize Eco Corner (eco-friendly products)
-    initializeEcoCorner();
     
     // Initialize retry queue processing
     initializeRetryQueue();
@@ -528,41 +902,48 @@ function addToCart(productId, quantity = 1, size = null) {
     const product = products.find(p => p.id === productId);
     if (!product) {
         showToast('Product not found', 'error');
-        return;
+        return false;
     }
     
     if (!product.inStock) {
         showToast('Sorry, this product is out of stock', 'warning');
-        return;
+        return false;
     }
     
-    // If size not provided, try to read from a size select in DOM
-    if (!size && product.category === 'clothing') {
-        const selectEl = document.getElementById(`size-select-${productId}`) || document.getElementById(`modal-size-${productId}`);
-        if (selectEl) {
-            size = selectEl.value || null;
+    if (product.sizes) {
+        if (!size) {
+            // Sized product from a product card: let the shopper pick a size first
+            quickView(productId);
+            showToast('Please select a size', 'info');
+            return false;
         }
     }
-
-    // For clothing, require size selection
-    if (product.category === 'clothing' && !size) {
-        showToast('Please select a size before adding to cart', 'warning');
-        return;
+    
+    const available = product.sizes ? (product.sizes[size] || 0) : product.stock;
+    const key = product.sizes ? `${productId}|${size}` : productId;
+    const existingItem = cart.find(item => item.key === key);
+    const inCart = existingItem ? existingItem.quantity : 0;
+    
+    if (available <= 0) {
+        showToast(`Size ${size} is sold out`, 'warning');
+        return false;
     }
-
-    // Check for existing item with same productId and size
-    const existingItem = cart.find(item => item.id === productId && (item.size || null) === (size || null));
-
+    if (inCart + quantity > available) {
+        showToast(available - inCart <= 0 ? `You already have all ${available} in your cart` : `Only ${available} in stock`, 'warning');
+        return false;
+    }
+    
     if (existingItem) {
         existingItem.quantity += quantity;
     } else {
         cart.push({
+            key: key,
             id: productId,
             name: product.name,
             price: product.price,
-            image: product.image || (product.images && product.images[0]) || '',
-            quantity: quantity,
-            size: size || null
+            image: product.image,
+            size: product.sizes ? size : null,
+            quantity: quantity
         });
     }
     
@@ -574,41 +955,51 @@ function addToCart(productId, quantity = 1, size = null) {
     updateCartItems();
     
     // Show success message
-    showToast(`${product.name} added to cart!`, 'success');
+    showToast(`${product.name}${product.sizes ? ' (' + size + ')' : ''} added to cart!`, 'success');
     
     // Open cart sidebar briefly to show item
     openCart();
     setTimeout(() => {
         closeCart();
     }, 2000);
+    return true;
 }
 
-function removeFromCart(productId) {
-    // Deprecated simple remove; keep signature but allow passing size via second arg when used
-    // We'll support calls like removeFromCart(productId, size)
-    const args = Array.from(arguments);
-    const size = args.length > 1 ? args[1] : null;
-    if (size) {
-        cart = cart.filter(item => !(item.id === productId && ((item.size || null) === (size || null))));
-    } else {
-        cart = cart.filter(item => item.id !== productId);
+function addToCartFromQuickView(productId) {
+    const product = products.find(p => p.id === productId);
+    if (product && product.sizes && !selectedSize) {
+        showToast('Please select a size', 'warning');
+        return;
     }
+    if (addToCart(productId, 1, selectedSize)) closeModal();
+}
+
+function selectSize(size, btn) {
+    selectedSize = size;
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+function removeFromCart(itemKey) {
+    cart = cart.filter(item => item.key !== itemKey);
     localStorage.setItem('blkpaper_cart', JSON.stringify(cart));
     updateCartUI();
     updateCartItems();
     showToast('Item removed from cart', 'info');
 }
 
-function updateCartQuantity(productId, quantity, size = null) {
-    const item = cart.find(item => item.id === productId && ((item.size || null) === (size || null)));
+function updateCartQuantity(itemKey, quantity) {
+    const item = cart.find(item => item.key === itemKey);
     if (item) {
-        if (quantity <= 0) {
-            // remove specific sized item
-            cart = cart.filter(i => !(i.id === productId && ((i.size || null) === (size || null))));
-            localStorage.setItem('blkpaper_cart', JSON.stringify(cart));
-            updateCartUI();
-            updateCartItems();
+        if (!quantity || quantity <= 0) {
+            removeFromCart(itemKey);
         } else {
+            const p = products.find(x => x.id === item.id);
+            const available = p ? (p.sizes ? (p.sizes[item.size] || 0) : p.stock) : quantity;
+            if (quantity > available) {
+                showToast(`Only ${available} in stock`, 'warning');
+                quantity = available;
+            }
             item.quantity = quantity;
             localStorage.setItem('blkpaper_cart', JSON.stringify(cart));
             updateCartUI();
@@ -622,6 +1013,9 @@ function updateCartUI() {
     const cartSubtotal = document.getElementById('cartSubtotal');
     const cartShipping = document.getElementById('cartShipping');
     const cartTotal = document.getElementById('cartTotal');
+    const discountRow = document.getElementById('cartDiscountRow');
+    const discountEl = document.getElementById('cartDiscount');
+    const couponApplied = document.getElementById('couponApplied');
     
     // Update cart count
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -630,15 +1024,24 @@ function updateCartUI() {
         cartCount.style.display = totalItems > 0 ? 'flex' : 'none';
     }
     
-    // Calculate totals
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = subtotal > 0 ? 100 : 0; // Free shipping over certain amount could be added
-    const total = subtotal + shipping;
+    // Calculate totals (includes coupon + admin shipping rules)
+    const t = calcTotals();
     
-    // Update totals
-    if (cartSubtotal) cartSubtotal.textContent = `৳${subtotal.toLocaleString()}`;
-    if (cartShipping) cartShipping.textContent = `৳${shipping.toLocaleString()}`;
-    if (cartTotal) cartTotal.textContent = `৳${total.toLocaleString()}`;
+    if (cartSubtotal) cartSubtotal.textContent = `৳${t.subtotal.toLocaleString()}`;
+    if (cartShipping) cartShipping.textContent = (t.shipping === 0 && t.subtotal > 0) ? 'Free' : `৳${t.shipping.toLocaleString()}`;
+    if (cartTotal) cartTotal.textContent = `৳${t.total.toLocaleString()}`;
+    if (discountRow) discountRow.style.display = t.discount > 0 ? 'flex' : 'none';
+    if (discountEl) discountEl.textContent = `-৳${t.discount.toLocaleString()}`;
+    
+    if (couponApplied) {
+        if (appliedCoupon && t.discount > 0) {
+            couponApplied.innerHTML = `<i class="fas fa-tag"></i> <strong>${escAttr(appliedCoupon.code)}</strong> applied <button type="button" onclick="removeCoupon()">Remove</button>`;
+            couponApplied.style.display = 'flex';
+        } else {
+            couponApplied.style.display = 'none';
+            couponApplied.innerHTML = '';
+        }
+    }
 }
 
 function updateCartItems() {
@@ -665,20 +1068,20 @@ function updateCartItems() {
             </div>
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.name}</div>
-                ${item.size ? `<div class="cart-item-size">Size: <strong>${item.size}</strong></div>` : ''}
+                ${item.size ? `<div class="cart-item-size">Size: ${item.size}</div>` : ''}
                 <div class="cart-item-price">৳${item.price.toLocaleString()}</div>
                 <div class="cart-item-controls">
                     <div class="quantity-controls">
-                        <button class="qty-btn" onclick="updateCartQuantity('${item.id}', ${item.quantity - 1}, '${item.size || ''}')">
+                        <button class="qty-btn" onclick="updateCartQuantity('${item.key}', ${item.quantity - 1})">
                             <i class="fas fa-minus"></i>
                         </button>
                         <input type="number" class="qty-input" value="${item.quantity}" 
-                               onchange="updateCartQuantity('${item.id}', parseInt(this.value), '${item.size || ''}')" min="1">
-                        <button class="qty-btn" onclick="updateCartQuantity('${item.id}', ${item.quantity + 1}, '${item.size || ''}')">
+                               onchange="updateCartQuantity('${item.key}', parseInt(this.value))" min="1">
+                        <button class="qty-btn" onclick="updateCartQuantity('${item.key}', ${item.quantity + 1})">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
-                    <button class="remove-btn" onclick="removeFromCart('${item.id}', '${item.size || ''}')">
+                    <button class="remove-btn" onclick="removeFromCart('${item.key}')">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -765,6 +1168,11 @@ function displayProducts(limit = 8) {
     // Limit products shown
     const displayedProducts = filteredProducts.slice(0, limit);
     
+    if (storeLoading) {
+        productsGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--gray-500);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 12px;"></i><p>Loading products…</p></div>';
+        return;
+    }
+    
     if (displayedProducts.length === 0) {
         productsGrid.innerHTML = `
             <div class="no-products" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
@@ -790,20 +1198,14 @@ function displayProducts(limit = 8) {
 
 function createProductCard(product) {
     const discount = product.originalPrice ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
-    // Use a display name if set (eco copies may provide a different display name)
-    const displayName = product.displayName || product.name;
-
-    // Normalize image source: support `image` as string, `image` as array, or `images` array
-    const imgSrc = Array.isArray(product.image) ? (product.image[0] || '') : (product.image || (product.images && product.images[0]) || '');
-
+    
     return `
         <div class="product-card ${product.featured ? 'featured' : ''} ${!product.inStock ? 'out-of-stock' : ''}" 
              data-category="${product.category}">
             <div class="product-image">
-                <img src="${imgSrc}" alt="${displayName}" loading="lazy" onerror="if(!this.__errored){this.__errored=true; if(this.src && this.src.indexOf('cm.png')===-1){this.src='cm.png';} }">
-                ${discount > 0 ? `<div class="product-badge">${discount}% OFF</div>` : ''}
+                <img src="${product.image}" alt="${product.name}" loading="lazy">
+                ${discount > 0 ? `<div class="product-badge">${product.onSale && STORE.sale.name ? escAttr(STORE.sale.name) + ' ' : ''}${discount}% OFF</div>` : ''}
                 ${!product.inStock ? `<div class="product-badge" style="background: var(--accent-danger);">Out of Stock</div>` : ''}
-                ${product.eco ? `<div class="eco-badge"><i class="fas fa-leaf"></i>Eco</div>` : ''}
                 <div class="product-actions">
                     <button class="action-btn" onclick="quickView('${product.id}')">
                         <i class="fas fa-eye"></i>
@@ -815,66 +1217,23 @@ function createProductCard(product) {
             </div>
             <div class="product-info">
                 <div class="product-category">${getCategoryName(product.category)}</div>
-                <h3 class="product-name">${displayName}</h3>
+                <h3 class="product-name">${product.name}</h3>
                 <p class="product-description">${product.description}</p>
-                ${product.category === 'clothing' ? `
-                <div class="product-size">
-                    <label for="size-select-${product.id}" style="font-size:0.85rem; color:var(--gray-600);">Size</label>
-                    <select id="size-select-${product.id}" style="width:100%; padding:8px; border-radius:8px; margin-top:6px;">
-                        <option value="">Select size</option>
-                        <option value="S">S</option>
-                        <option value="M">M</option>
-                        <option value="L">L</option>
-                        <option value="XL">XL</option>
-                        <option value="XXL">XXL</option>
-                    </select>
-                </div>` : ''}
+                ${product.inStock && product.stock <= (Number(STORE.settings.lowStockAt) || 0) ? `<div class="stock-note">Only ${product.stock} left</div>` : ''}
                 <div class="product-footer">
                     <div class="product-price">
                         <span class="current-price">৳${product.price.toLocaleString()}</span>
                         ${product.originalPrice ? `<span class="original-price">৳${product.originalPrice.toLocaleString()}</span>` : ''}
                     </div>
-                    <button class="add-to-cart-btn" onclick="addToCart('${product.id}')" 
+                    <button class="add-to-cart-btn" onclick="${product.sizes ? `quickView('${product.id}')` : `addToCart('${product.id}')`}" 
                             ${!product.inStock ? 'disabled' : ''}>
-                        <i class="fas fa-shopping-cart"></i>
-                        ${product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                        <i class="fas ${product.sizes ? 'fa-ruler' : 'fa-shopping-cart'}"></i>
+                        ${!product.inStock ? 'Out of Stock' : (product.sizes ? 'Select Size' : 'Add to Cart')}
                     </button>
                 </div>
             </div>
         </div>
     `;
-}
-
-// ===== ECO CORNER =====
-function initializeEcoCorner() {
-    const ecoGrid = document.getElementById('ecoProductsGrid');
-    if (!ecoGrid) return;
-
-    // Build independent copies of eco products so modifying eco display/data doesn't mutate main products
-    const ecoRaw = products.filter(p => p.eco === true);
-
-    if (!ecoRaw || ecoRaw.length === 0) {
-        ecoGrid.innerHTML = '<p class="muted">No eco-friendly products available yet. Check back soon.</p>';
-        return;
-    }
-
-    const ecoProducts = ecoRaw.map(p => {
-        // shallow copy is sufficient for display overrides
-        const copy = Object.assign({}, p);
-        // Distinct displayName for eco corner
-        copy.displayName = (p.displayName || p.name) + ' — Eco Corner';
-        // Optionally highlight eco pricing (small discount shown to users)
-        if (typeof p.price === 'number') copy.price = Math.round(p.price * 0.95);
-        // Set eco image and mark as out of stock for Eco Corner display
-        copy.image = 'cm.png';
-        copy.images = ['cm.png'];
-        copy.inStock = false;
-        // Mark as eco variant
-        copy.isEcoVariant = true;
-        return copy;
-    });
-
-    ecoGrid.innerHTML = ecoProducts.map(p => createProductCard(p)).join('');
 }
 
 function getCategoryName(category) {
@@ -911,37 +1270,26 @@ function resetFilters() {
 function quickView(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
+    selectedSize = null;
+    const lowAt = Number(STORE.settings.lowStockAt) || 0;
+    const sizeHTML = product.sizes ? `
+        <div class="size-selector">
+            <div class="size-label">Select Size</div>
+            <div class="size-options">
+                ${Object.keys(product.sizes).map(sz => {
+                    const q = product.sizes[sz];
+                    return `<button type="button" class="size-btn ${q <= 0 ? 'sold-out' : ''}" ${q <= 0 ? 'disabled' : ''} onclick="selectSize('${sz}', this)">${sz}${q > 0 && q <= lowAt ? `<small>${q} left</small>` : ''}${q <= 0 ? '<small>sold out</small>' : ''}</button>`;
+                }).join('')}
+            </div>
+        </div>` : '';
     
     const modalBody = document.getElementById('modalBody');
     const modal = document.getElementById('productModal');
     
-    // Get all images
-    const images = Array.isArray(product.images) && product.images.length
-        ? product.images
-        : (Array.isArray(product.image) ? product.image : (product.image ? [product.image] : []));
-    
-    // Build carousel HTML for multiple images
-    let imageHTML = '';
-    if (images.length > 1) {
-        const slidesHTML = images.map(src => `<div class="carousel-slide"><img src="${src}" alt="${product.name}" onerror="if(!this.__errored){this.__errored=true; if(this.src && this.src.indexOf('cm.png')===-1){this.src='cm.png';} }"></div>`).join('');
-        const indicatorsHTML = images.map((_, idx) => `<div class="carousel-indicator${idx === 0 ? ' active' : ''}" data-index="${idx}"></div>`).join('');
-        imageHTML = `
-            <div class="product-carousel quick-view-carousel">
-                <button class="carousel-nav left" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
-                <button class="carousel-nav right" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
-                <div class="carousel-track">${slidesHTML}</div>
-                <div class="carousel-indicators">${indicatorsHTML}</div>
-            </div>
-        `;
-    } else {
-        const imgSrc = images[0] || '';
-        imageHTML = `<img src="${imgSrc}" alt="${product.name}" onerror="if(!this.__errored){this.__errored=true; if(this.src && this.src.indexOf('cm.png')===-1){this.src='cm.png';} }">`;
-    }
-    
     modalBody.innerHTML = `
         <div class="product-quick-view">
             <div class="quick-view-image">
-                ${imageHTML}
+                <img src="${product.image}" alt="${product.name}">
             </div>
             <div class="quick-view-info">
                 <div class="product-category">${getCategoryName(product.category)}</div>
@@ -957,22 +1305,9 @@ function quickView(productId) {
                     <span class="current-price" style="font-size: 1.8rem;">৳${product.price.toLocaleString()}</span>
                     ${product.originalPrice ? `<span class="original-price" style="font-size: 1.2rem;">৳${product.originalPrice.toLocaleString()}</span>` : ''}
                 </div>
-                ${product.category === 'clothing' ? `
-                <div style="margin-top:12px;">
-                    <label for="modal-size-${product.id}" style="font-size:0.95rem; color:var(--gray-700);">Choose Size</label>
-                    <select id="modal-size-${product.id}" style="width:100%; padding:8px; border-radius:8px; margin-top:6px;">
-                        <option value="">Select size</option>
-                        <option value="S">S</option>
-                        <option value="M">M</option>
-                        <option value="L">L</option>
-                        <option value="XL">XL</option>
-                        <option value="XXL">XXL</option>
-                    </select>
-                </div>
-                ` : ''}
-
-                <div class="product-actions" style="display: flex; gap: 16px; margin-top: 24px;">
-                    <button class="btn btn-primary btn-large" onclick="addToCart('${product.id}', 1, document.getElementById('modal-size-${product.id}') ? document.getElementById('modal-size-${product.id}').value : null); closeModal();" 
+                ${sizeHTML}
+                <div class="quick-actions" style="display: flex; gap: 16px; margin-top: 32px; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-large" onclick="addToCartFromQuickView('${product.id}')" 
                             ${!product.inStock ? 'disabled' : ''}>
                         <i class="fas fa-shopping-cart"></i>
                         ${product.inStock ? 'Add to Cart' : 'Out of Stock'}
@@ -988,11 +1323,6 @@ function quickView(productId) {
     
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
-    
-    // Initialize carousel if multiple images
-    if (images.length > 1) {
-        setTimeout(() => initCarousels(), 0);
-    }
 }
 
 function toggleWishlist(productId) {
@@ -1122,9 +1452,7 @@ function showCheckoutModal() {
     
     if (modalTitle) modalTitle.textContent = 'Checkout';
     
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = 100;
-    const total = subtotal + shipping;
+    const { subtotal, discount, shipping, total } = calcTotals();
     
     modalBody.innerHTML = `
         <div class="checkout-content">
@@ -1168,8 +1496,7 @@ function showCheckoutModal() {
                             <img src="${item.image}" alt="${item.name}">
                             <div class="item-details">
                                 <span class="item-name">${item.name}</span>
-                                <span class="item-qty">Qty: ${item.quantity}</span>
-                                ${item.size ? `<span class="item-size">Size: ${item.size}</span>` : ''}
+                                <span class="item-qty">${item.size ? 'Size: ' + item.size + ' · ' : ''}Qty: ${item.quantity}</span>
                             </div>
                             <span class="item-total">৳${(item.price * item.quantity).toLocaleString()}</span>
                         </div>
@@ -1180,9 +1507,14 @@ function showCheckoutModal() {
                         <span>Subtotal:</span>
                         <span>৳${subtotal.toLocaleString()}</span>
                     </div>
+                    ${discount > 0 ? `
+                    <div class="total-line discount">
+                        <span>Discount${appliedCoupon ? ' (' + escAttr(appliedCoupon.code) + ')' : ''}:</span>
+                        <span>-৳${discount.toLocaleString()}</span>
+                    </div>` : ''}
                     <div class="total-line">
                         <span>Shipping:</span>
-                        <span>৳${shipping.toLocaleString()}</span>
+                        <span>${shipping === 0 ? 'Free' : '৳' + shipping.toLocaleString()}</span>
                     </div>
                     <div class="total-line total">
                         <span>Total:</span>
@@ -1201,7 +1533,7 @@ function showCheckoutModal() {
     document.body.style.overflow = 'hidden';
 }
 
-function submitOrder() {
+async function submitOrder() {
     const form = document.getElementById('checkoutForm');
     const formData = new FormData(form);
     
@@ -1211,25 +1543,22 @@ function submitOrder() {
         return;
     }
     
-    // Create order object
-    const order = {
-        id: generateOrderId(),
-        customerInfo: {
-            fullName: formData.get('fullName'),
-            phone: formData.get('phone'),
-            email: formData.get('email'),
-            address: formData.get('address'),
-            city: formData.get('city'),
-            paymentMethod: formData.get('paymentMethod'),
-            notes: formData.get('notes') || ''
-        },
-        items: [...cart],
-        subtotal: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        shipping: 100,
-        total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 100,
-        status: 'pending',
-        orderDate: new Date().toISOString(),
-        estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days from now
+    // Re-check stock/prices right before ordering
+    syncCartWithStore();
+    if (cart.length === 0) {
+        showToast('Some items are no longer available. Please review your cart.', 'warning');
+        closeModal();
+        return;
+    }
+    const totals = calcTotals();
+    const customerInfo = {
+        fullName: formData.get('fullName'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        address: formData.get('address'),
+        city: formData.get('city'),
+        paymentMethod: formData.get('paymentMethod'),
+        notes: formData.get('notes') || ''
     };
     
     // Show loading state
@@ -1238,120 +1567,76 @@ function submitOrder() {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     submitBtn.disabled = true;
     
-    // Simulate order processing
-    setTimeout(() => {
-        // Save order (now includes Google Sheets integration)
-        saveOrder(order);
+    try {
+        let order;
+        if (sb) {
+            // LIVE MODE: the database checks stock, deducts it and saves the order in one safe step.
+            const { data, error } = await sb.rpc('place_order', {
+                p_customer: {
+                    full_name: customerInfo.fullName,
+                    phone: customerInfo.phone,
+                    email: customerInfo.email,
+                    address: customerInfo.address,
+                    city: customerInfo.city,
+                    payment_method: customerInfo.paymentMethod,
+                    notes: customerInfo.notes
+                },
+                p_items: cart.map(i => ({ id: i.id, size: i.size || null, qty: i.quantity })),
+                p_coupon: totals.discount > 0 && appliedCoupon ? appliedCoupon.code : null
+            });
+            if (error) throw error;
+            order = {
+                id: data.id,
+                customerInfo: customerInfo,
+                items: data.items.map(l => ({ id: l.id, name: l.name, size: l.size || null, quantity: l.qty, price: l.unit_price, image: l.image })),
+                subtotal: data.subtotal,
+                discount: data.discount || 0,
+                coupon: data.coupon || '',
+                shipping: data.shipping,
+                total: data.total,
+                status: 'pending',
+                orderDate: data.created_at,
+                estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days from now
+            };
+            // Optional extra copy to your Google Sheet (does not affect the order)
+            sendOrderToGoogleSheets(order);
+        } else {
+            // DEMO MODE (Supabase keys not set): old behaviour, nothing is deducted
+            order = {
+                id: generateOrderId(),
+                customerInfo: customerInfo,
+                items: cart.map(i => ({ ...i })),
+                subtotal: totals.subtotal,
+                discount: totals.discount,
+                coupon: totals.discount > 0 && appliedCoupon ? appliedCoupon.code : '',
+                shipping: totals.shipping,
+                total: totals.total,
+                status: 'pending',
+                orderDate: new Date().toISOString(),
+                estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+            };
+            saveOrder(order);
+        }
         
-        // Clear cart
+        // Clear cart (and the used coupon)
         clearCart();
+        removeCoupon();
         
         // Send WhatsApp notification
         sendWhatsAppNotification(order);
         
         // Show success
         showOrderConfirmation(order);
-
-        // Generate and send bill by opening user's mail client with prefilled email
-        if (order.customerInfo && order.customerInfo.email) {
-            try {
-                sendBillByEmail(order.customerInfo.email, order);
-            } catch (err) {
-                console.error('Failed to open mail client for bill:', err);
-            }
-        }
         
-        // Reset button
+        // Pull the new stock numbers straight away
+        if (sb) refreshFromServer();
+    } catch (err) {
+        console.error('Order failed:', err);
+        const msg = (err && err.message) ? err.message : 'Something went wrong. Please try again.';
+        showToast(msg, 'error');
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
-    }, 2000);
-}
-
-// Create a plain-text bill for email body
-function generateBillText(order) {
-    const lines = [];
-    lines.push('BLKPAPER - Order Receipt');
-    lines.push('Order ID: ' + order.id);
-    lines.push('Date: ' + new Date(order.orderDate).toLocaleString());
-    lines.push('');
-    lines.push('Customer: ' + (order.customerInfo.fullName || ''));
-    lines.push('Email: ' + (order.customerInfo.email || ''));
-    lines.push('Phone: ' + (order.customerInfo.phone || ''));
-    lines.push('Address: ' + (order.customerInfo.address || '') + ', ' + (order.customerInfo.city || ''));
-    lines.push('');
-    lines.push('Items:');
-    order.items.forEach(item => {
-        const name = item.name || '';
-        const qty = item.quantity || 1;
-        const size = item.size ? ` (Size: ${item.size})` : '';
-        const lineTotal = (item.price * item.quantity).toLocaleString();
-        lines.push(`- ${name}${size} x${qty} : ৳${lineTotal}`);
-    });
-    lines.push('');
-    lines.push('Subtotal: ৳' + order.subtotal.toLocaleString());
-    lines.push('Shipping: ৳' + order.shipping.toLocaleString());
-    lines.push('Total: ৳' + order.total.toLocaleString());
-    lines.push('');
-    if (order.customerInfo.notes) {
-        lines.push('Notes: ' + order.customerInfo.notes);
-        lines.push('');
-    }
-    lines.push('Thank you for shopping with BLKPAPER!');
-    lines.push('');
-    lines.push('If you have any questions, reply to this email or contact us at blkpaper399@gmail.com');
-
-    return lines.join('\n');
-}
-
-// Open user's default mail client with prefilled subject and body containing the bill
-function sendBillByEmail(email, order) {
-    const subject = `BLKPAPER Order ${order.id} - Receipt`;
-    const body = generateBillText(order);
-
-    // mailto body length is limited; trim if very long
-    let encodedBody = encodeURIComponent(body);
-    if (encodedBody.length > 15000) {
-        // Trim body to avoid exceeding URL limits
-        const shortBody = body.substring(0, 8000) + '\n\n[Content truncated]';
-        encodedBody = encodeURIComponent(shortBody);
-    }
-
-    const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`;
-
-    // Open mail client
-    window.location.href = mailto;
-    showToast('Opened your mail client to send the invoice.', 'info');
-}
-
-// Optionally open a printable invoice window (user can save as PDF)
-function openInvoiceWindow(order) {
-    const html = [];
-    html.push('<!doctype html><html><head><meta charset="utf-8"><title>Invoice - ' + order.id + '</title>');
-    html.push('<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111} .header{display:flex;justify-content:space-between;align-items:center} .items{width:100%;border-collapse:collapse;margin-top:20px} .items td, .items th{padding:8px;border:1px solid #ddd} .total{font-weight:700}</style>');
-    html.push('</head><body>');
-    html.push('<div class="header"><h2>BLKPAPER - Invoice</h2><div>Order: ' + order.id + '<br>' + new Date(order.orderDate).toLocaleString() + '</div></div>');
-    html.push('<p>Customer: ' + (order.customerInfo.fullName || '') + '<br>' + (order.customerInfo.email || '') + '<br>' + (order.customerInfo.phone || '') + '</p>');
-    html.push('<table class="items"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>');
-    order.items.forEach(item => {
-        html.push('<tr>');
-        html.push('<td>' + (item.name || '') + (item.size ? ' (' + item.size + ')' : '') + '</td>');
-        html.push('<td>' + item.quantity + '</td>');
-        html.push('<td>৳' + item.price.toLocaleString() + '</td>');
-        html.push('<td>৳' + (item.price * item.quantity).toLocaleString() + '</td>');
-        html.push('</tr>');
-    });
-    html.push('</tbody></table>');
-    html.push('<p class="total">Subtotal: ৳' + order.subtotal.toLocaleString() + '<br>Shipping: ৳' + order.shipping.toLocaleString() + '<br>Total: ৳' + order.total.toLocaleString() + '</p>');
-    html.push('<p>Thank you for shopping with BLKPAPER.</p>');
-    html.push('<script>window.print();</script>');
-    html.push('</body></html>');
-
-    const w = window.open('', '_blank');
-    if (w) {
-        w.document.write(html.join(''));
-        w.document.close();
-    } else {
-        showToast('Popup blocked. Please allow popups to print or save invoice.', 'warning');
+        if (sb) refreshFromServer(true);   // stock may have changed: update the cart/prices (keep the error message visible)
     }
 }
 
@@ -1400,9 +1685,11 @@ async function sendOrderToGoogleSheets(order) {
             // Order Details
             itemsCount: order.items.length,
             itemsDetails: order.items.map(item => 
-                `${item.name}${item.size ? ' [Size: '+item.size+']' : ''} (Qty: ${item.quantity}, Price: ৳${item.price})`
+                `${item.name}${item.size ? ' [Size: ' + item.size + ']' : ''} (Qty: ${item.quantity}, Price: ৳${item.price})`
             ).join(' | '),
             subtotal: order.subtotal,
+            discount: order.discount || 0,
+            coupon: order.coupon || '',
             shipping: order.shipping,
             total: order.total,
             
@@ -1420,29 +1707,16 @@ async function sendOrderToGoogleSheets(order) {
         };
         
         // Send to Google Sheets via Apps Script
-        // Send to Apps Script. Remove `mode: 'no-cors'` so we receive real responses/errors.
-        // Send form-encoded to avoid CORS preflight (use Apps Script e.parameter or e.postData.contents)
-        const orderForm = new URLSearchParams();
-        orderForm.append('payload', JSON.stringify(orderData));
-
         const response = await fetch(GOOGLE_SHEETS_CONFIG.scriptURL, {
             method: 'POST',
-            body: orderForm
+            mode: 'no-cors', // Required for Google Apps Script
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData)
         });
-
-        // Try to parse response (Apps Script should return JSON)
-        let respText = null;
-        try {
-            respText = await response.text();
-            console.log('Google Sheets response:', respText);
-            if (!response.ok) {
-                throw new Error('Server responded with status ' + response.status + ': ' + respText);
-            }
-        } catch (err) {
-            console.warn('Could not parse response from Apps Script:', err);
-        }
-
-        console.log('✅ Order send attempt completed (check Apps Script logs for append confirmation)');
+        
+        console.log('✅ Order sent to Google Sheets successfully');
         
         // Send backup notification email (optional)
         await sendBackupNotification(order);
@@ -1540,7 +1814,7 @@ Total: ৳${order.total.toLocaleString()}
 Payment: ${order.customerInfo.paymentMethod.toUpperCase()}
 
 Items:
-${order.items.map(item => `• ${item.name} (Qty: ${item.quantity})`).join('\n')}
+${order.items.map(item => `• ${item.name}${item.size ? ' [' + item.size + ']' : ''} (Qty: ${item.quantity})`).join('\n')}
 
 Address: ${order.customerInfo.address}, ${order.customerInfo.city}
 
@@ -1638,44 +1912,15 @@ function handleContactForm(e) {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
     submitBtn.disabled = true;
     
-    // Try to POST to Google Apps Script endpoint configured in GOOGLE_SHEETS_CONFIG
-    const endpoint = GOOGLE_SHEETS_CONFIG.scriptURL;
-    const payload = {
-        action: 'addContact',
-        sheet: 'ContactForm',
-        data: contactData
-    };
-
-    // Use form-encoded body to avoid CORS preflight (Apps Script web apps don't respond to OPTIONS)
-    const formBody = new URLSearchParams();
-    formBody.append('payload', JSON.stringify(payload));
-
-    fetch(endpoint, {
-        method: 'POST',
-        body: formBody
-    })
-    .then(response => response.json().catch(() => ({})))
-    .then(result => {
-        // Assume success if script returns a success object or HTTP 200
+    // Simulate form submission
+    setTimeout(() => {
         showToast('Thank you! We\'ll get back to you soon.', 'success');
         e.target.reset();
-    })
-    .catch(err => {
-        // Fallback: save contact locally so entries are not lost
-        try {
-            const backups = JSON.parse(localStorage.getItem('contact_form_backups') || '[]');
-            backups.push({ ts: new Date().toISOString(), data: contactData });
-            localStorage.setItem('contact_form_backups', JSON.stringify(backups));
-            showToast('Could not send to server; saved locally as backup.', 'warning');
-        } catch (e) {
-            showToast('Something went wrong. Please try again later.', 'error');
-        }
-    })
-    .finally(() => {
+        
         // Reset button
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
-    });
+    }, 2000);
 }
 
 // ===== MODALS =====
@@ -1916,43 +2161,6 @@ window.BLKPAPER_ADMIN = {
         };
         
         await sendOrderToGoogleSheets(testOrder);
-    },
-
-    // Lightweight client-side test for Apps Script endpoint (sends a small test payload)
-    testAppsScript: async () => {
-        const endpoint = GOOGLE_SHEETS_CONFIG.scriptURL;
-        const payload = {
-            action: 'testClientPing',
-            timestamp: new Date().toISOString(),
-            note: 'Client-side test payload from BLKPAPER website'
-        };
-
-        try {
-            showToast('Sending Apps Script test payload...');
-            // Use form-encoded body to avoid OPTIONS preflight in browsers
-            const form = new URLSearchParams();
-            form.append('payload', JSON.stringify(payload));
-
-            const resp = await fetch(endpoint, {
-                    method: 'POST',
-                    body: form
-                });
-
-            const text = await resp.text();
-            console.log('Apps Script test response:', resp.status, text);
-
-            if (resp.ok) {
-                showToast('Apps Script test succeeded (' + resp.status + ')', 'success');
-                alert('Apps Script test succeeded.\nStatus: ' + resp.status + '\nResponse: ' + text + '\nCheck the spreadsheet and Apps Script logs.');
-            } else {
-                showToast('Apps Script test failed (' + resp.status + ')', 'error');
-                alert('Apps Script test failed.\nStatus: ' + resp.status + '\nResponse: ' + text + '\nCheck deployment settings and CORS.');
-            }
-        } catch (err) {
-            console.error('Apps Script test error:', err);
-            showToast('Apps Script test error: check console', 'error');
-            alert('Network/CORS error when testing Apps Script. See console for details.');
-        }
     }
 };
 console.log(`
@@ -1973,161 +2181,3 @@ Shortcuts:
 Ready to redefine style! 🖤
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
-
-/**
- * Build carousel HTML for a product.
- * Accepts product.images (array) or product.image (single).
- */
-function buildProductCarousel(product) {
-    const images = Array.isArray(product.images) && product.images.length
-        ? product.images
-        : (product.image ? [product.image] : []);
-
-    if (!images.length) return ''; // no images
-
-    // create container
-    const wrapper = document.createElement('div');
-    wrapper.className = 'product-carousel';
-
-    // track
-    const track = document.createElement('div');
-    track.className = 'carousel-track';
-
-    images.forEach(src => {
-        const slide = document.createElement('div');
-        slide.className = 'carousel-slide';
-        const img = document.createElement('img');
-        img.src = src;
-        img.alt = product.name || 'Product image';
-        slide.appendChild(img);
-        track.appendChild(slide);
-    });
-
-    // nav buttons (only show if multiple)
-    if (images.length > 1) {
-        const btnLeft = document.createElement('button');
-        btnLeft.className = 'carousel-nav left';
-        btnLeft.setAttribute('aria-label', 'Previous image');
-        btnLeft.innerHTML = '<i class="fas fa-chevron-left"></i>';
-
-        const btnRight = document.createElement('button');
-        btnRight.className = 'carousel-nav right';
-        btnRight.setAttribute('aria-label', 'Next image');
-        btnRight.innerHTML = '<i class="fas fa-chevron-right"></i>';
-
-        wrapper.appendChild(btnLeft);
-        wrapper.appendChild(btnRight);
-
-        // indicators
-        const indicators = document.createElement('div');
-        indicators.className = 'carousel-indicators';
-        images.forEach((_, idx) => {
-            const dot = document.createElement('div');
-            dot.className = 'carousel-indicator' + (idx === 0 ? ' active' : '');
-            dot.dataset.index = idx;
-            indicators.appendChild(dot);
-        });
-        wrapper.appendChild(indicators);
-    }
-
-    wrapper.appendChild(track);
-    return wrapper;
-}
-
-/**
- * Initialize all carousels in the DOM.
- * Call this after products are rendered.
- */
-function initCarousels() {
-    document.querySelectorAll('.product-carousel').forEach(carousel => {
-        const track = carousel.querySelector('.carousel-track');
-        const slides = Array.from(track.children);
-        if (!slides.length) return;
-
-        let index = 0;
-        let startX = 0;
-        let currentX = 0;
-        let isDragging = false;
-        const getWidth = () => carousel.clientWidth;
-
-        const update = (animate = true) => {
-            if (!animate) track.style.transition = 'none';
-            else track.style.transition = '';
-            const offset = -index * getWidth();
-            track.style.transform = `translateX(${offset}px)`;
-            // indicators
-            const dots = carousel.querySelectorAll('.carousel-indicator');
-            dots.forEach(d => d.classList.remove('active'));
-            if (dots[index]) dots[index].classList.add('active');
-            // restore transition after immediate set
-            if (!animate) requestAnimationFrame(()=> track.style.transition = '');
-        };
-
-        // next/prev
-        const next = () => { index = Math.min(index + 1, slides.length - 1); update(); };
-        const prev = () => { index = Math.max(index - 1, 0); update(); };
-
-        // navigation buttons
-        const btnLeft = carousel.querySelector('.carousel-nav.left');
-        const btnRight = carousel.querySelector('.carousel-nav.right');
-        if (btnLeft) btnLeft.addEventListener('click', prev);
-        if (btnRight) btnRight.addEventListener('click', next);
-
-        // indicators
-        carousel.querySelectorAll('.carousel-indicator').forEach(dot => {
-            dot.addEventListener('click', () => {
-                index = Number(dot.dataset.index);
-                update();
-            });
-        });
-
-        // swipe handling
-        track.addEventListener('pointerdown', (e) => {
-            isDragging = true;
-            startX = e.clientX;
-            track.setPointerCapture(e.pointerId);
-            track.style.transition = 'none';
-        });
-        track.addEventListener('pointermove', (e) => {
-            if (!isDragging) return;
-            currentX = e.clientX;
-            const diff = currentX - startX;
-            track.style.transform = `translateX(${-index * getWidth() + diff}px)`;
-        });
-        track.addEventListener('pointerup', (e) => {
-            if (!isDragging) return;
-            isDragging = false;
-            const diff = e.clientX - startX;
-            const threshold = getWidth() * 0.15;
-            if (diff > threshold) prev();
-            else if (diff < -threshold) next();
-            else update();
-        });
-        track.addEventListener('pointercancel', () => { isDragging = false; update(); });
-
-        // handle window resize
-        window.addEventListener('resize', () => update(false));
-
-        // initial layout
-        update(false);
-    });
-}
-
-/**
- * Helper: when rendering product cards, insert carousel element.
- * Example usage in your product render loop:
- *
- * const productCard = document.createElement('div');
- * productCard.className = 'product-card';
- * const carouselEl = buildProductCarousel(product);
- * if (carouselEl) productCard.appendChild(carouselEl);
- * // ... add rest of product info ...
- *
- * After all products loaded, call:
- * initCarousels();
- */
-
-// If your existing product rendering function is named renderProducts or similar,
-// ensure it calls initCarousels() after populating #productsGrid.
-// Example (add near end of your render function):
-// initCarousels();

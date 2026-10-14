@@ -27,12 +27,15 @@
     <link rel="apple-touch-icon" href="logo6.png">
 </head>
 <body>
+    <!-- Announcement / sale banner (controlled from the admin panel) -->
+    <div class="announcement-bar" id="announcementBar" style="display:none"><span></span></div>
+
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
         <div class="loading-content">
                 <div class="loading-logo">
-                <img src="logo6.png" alt="BLKPAPER Logo" height="200px" width="400px">
-                <h2></h2>
+                <img src="logo6.png" alt="BLKPAPER Logo" class="logo-image">
+                <h2>BLKPAPER</h2>
             </div>
             <div class="loading-bar">
                 <div class="loading-progress"></div>
@@ -130,10 +133,10 @@
             </div>
             <div class="hero-image">
                 <div class="hero-product">
-                    <img src="download (8).jfif" alt="BLKPAPER Fashion" class="hero-img">
+                    <img src="hero.jfif" alt="BLKPAPER Fashion" class="hero-img">
                     <div class="hero-product-info">
                         <span class="product-name">Urban Collection</span>
-                        <span class="product-price">From ৳1,200</span>
+                        <span class="product-price">From ৳900</span>
                     </div>
                 </div>
             </div>
@@ -195,6 +198,8 @@
                 </div>
             </div>
         </div>
+    </section>
+
     <!-- Memory Band Feature -->
     <section class="memory-band-feature" id="memory-band">
         <div class="container">
@@ -233,12 +238,12 @@
                         </div>
                     </div>
                     <div class="memory-band-price">
-                        <span class="price">৳1,500</span>
-                        <span class="original-price">৳1,800</span>
-                        <span class="discount">17% OFF</span>
+                        <span class="price" id="mbPrice">৳2,500</span>
+                        <span class="original-price" id="mbOriginal">৳3,000</span>
+                        <span class="discount" id="mbDiscount">17% OFF</span>
                     </div>
                     <div class="memory-band-actions">
-                        <button class="btn btn-primary btn-large" onclick="addToCart('memory-band-001')">
+                        <button class="btn btn-primary btn-large" id="mbAddBtn" onclick="addToCart('memory-band-001')">
                             <i class="fas fa-shopping-cart"></i>
                             Add to Cart
                         </button>
@@ -250,7 +255,7 @@
                 </div>
                 <div class="memory-band-visual">
                     <div class="memory-band-showcase">
-                        <img src="wnb/m1p1.png" alt="Memory Band" class="memory-band-img">
+                        <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Memory Band" class="memory-band-img">
                         <div class="memory-band-glow"></div>
                     </div>
                 </div>
@@ -302,11 +307,11 @@
                     </p>
                     <div class="about-stats">
                         <div class="stat-item">
-                            <span class="stat-number">50+</span>
+                            <span class="stat-number">1</span>
                             <span class="stat-label">Happy Customers</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">55+</span>
+                            <span class="stat-number">1</span>
                             <span class="stat-label">Products Sold</span>
                         </div>
                         <div class="stat-item">
@@ -331,53 +336,6 @@
         </div>
     </section>
 
-    <!-- About Eco Corner --><!-- inserted: explains the purpose of Eco Corner -->
-    <section class="eco-about" id="eco-about">
-        <div class="container">
-            <div class="eco-about-content">
-                <div class="eco-about-text">
-                    <h2>About the Eco Corner</h2>
-                    <p>
-                        The Eco Corner highlights products made from recycled, upcycled, or sustainably-sourced materials.
-                        Choosing these items helps reduce waste, lower carbon footprints, and support responsible manufacturing.
-                    </p>
-                    <ul class="eco-benefits">
-                        <li><strong>Less Waste:</strong> Uses recycled materials to give products a second life.</li>
-                        <li><strong>Lower Footprint:</strong> Reduced energy and resource use during production.</li>
-                        <li><strong>Ethical Choice:</strong> Supports brands that prioritize people and planet.</li>
-                    </ul>
-                    <div style="margin-top:14px;">
-                        <button class="btn btn-outline" onclick="scrollToSection('#eco-corner')">Explore Eco Products</button>
-                    </div>
-                </div>
-                <div class="eco-about-visual">
-                    <img src="https://images.unsplash.com/photo-1501004318641-b39e6451bec6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Eco Materials" />
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Eco Corner -->
-    <section class="eco-corner" id="eco-corner">
-        <div class="container">
-            <div class="section-header">
-                <h2>Eco Corner</h2>
-                <p>Products made from recycled or sustainable materials — kinder to the planet.</p>
-            </div>
-
-            <!-- Eco Products Grid -->
-            <div class="products-grid" id="ecoProductsGrid">
-                <!-- Eco-friendly products rendered here -->
-            </div>
-
-            <div class="eco-actions" style="text-align:center; margin-top:18px;">
-                <button class="btn btn-outline" onclick="filterProducts('all'); scrollToSection('#shop');">
-                    View All Products
-                </button>
-            </div>
-        </div>
-    </section>
-
     <!-- Contact Section -->
     <section class="contact" id="contact">
         <div class="container">
@@ -393,7 +351,7 @@
                             </div>
                             <div class="method-info">
                                 <h4>Phone</h4>
-                                <p>01577030164</p>
+                                <p data-store="phone">01577030164</p>
                             </div>
                         </div>
                         
@@ -403,7 +361,7 @@
                             </div>
                             <div class="method-info">
                                 <h4>Email</h4>
-                                <p>blkpaper399@gmail.com</p>
+                                <p data-store="email">blkpaper399@gmail.com</p>
                             </div>
                         </div>
                         
@@ -413,7 +371,7 @@
                             </div>
                             <div class="method-info">
                                 <h4>Location</h4>
-                                <p>sector#6,uttara,Dhaka,Bangladesh</p>
+                                <p data-store="address">sector#6,uttara,Dhaka,Bangladesh</p>
                             </div>
                         </div>
                     </div>
@@ -535,12 +493,6 @@
                     <i class="fab fa-cc-mastercard"></i>
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
-                <!-- Admin test button (visible for debugging) -->
-                <div style="margin-left:16px;">
-                    <button id="testAppsScriptBtn" class="btn btn-outline" style="padding:6px 10px; font-size:0.85rem;" onclick="BLKPAPER_ADMIN.testAppsScript()" title="Send test payload to Apps Script">
-                        Test Apps Script
-                    </button>
-                </div>
             </div>
         </div>
     </footer>
@@ -557,10 +509,19 @@
             <!-- Cart items will be dynamically loaded -->
         </div>
         <div class="cart-footer">
+            <div class="coupon-box">
+                <input type="text" id="couponInput" placeholder="Coupon code" autocomplete="off" onkeydown="if(event.key==='Enter'){applyCouponFromInput()}">
+                <button type="button" class="btn btn-outline" onclick="applyCouponFromInput()">Apply</button>
+            </div>
+            <div class="coupon-applied" id="couponApplied" style="display:none"></div>
             <div class="cart-total">
                 <div class="total-line">
                     <span>Subtotal:</span>
                     <span id="cartSubtotal">৳0</span>
+                </div>
+                <div class="total-line discount" id="cartDiscountRow" style="display:none">
+                    <span>Discount:</span>
+                    <span id="cartDiscount">-৳0</span>
                 </div>
                 <div class="total-line shipping">
                     <span>Shipping:</span>
@@ -636,6 +597,9 @@
 
     <!-- Scripts -->
         <!-- JavaScript -->
+    <!-- Supabase (database, image storage, live updates) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="supabase-config.js"></script>
     <script src="script.js"></script>
     
     <!-- Test Suite (Development Only) -->
