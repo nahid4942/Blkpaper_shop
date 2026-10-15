@@ -235,7 +235,11 @@ const DEFAULT_SETTINGS = {
     email: 'blkpaper399@gmail.com',
     address: 'sector#6,uttara,Dhaka,Bangladesh',
     sizeOptions: ['S', 'M', 'L', 'XL', 'XXL'],
-    lowStockAt: 3
+    lowStockAt: 3,
+    bkashNumber: '',              // set in the admin panel to turn on bKash online payment
+    bkashName: '',
+    bkashQr: '',
+    bkashHoldMinutes: 15
 };
 
 const DEFAULT_SALE = {
@@ -457,7 +461,10 @@ async function refreshFromServer(quiet) {
     if (refreshing) { refreshAgain = true; return; }
     refreshing = true;
     try {
-        const fresh = await fetchStoreFromServer();
+        const fresh = await Promise.race([
+            fetchStoreFromServer(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('The shop took too long to respond')), 12000))
+        ]);
         STORE = fresh;
         storeLoading = false;
         try { localStorage.setItem(STORE_CACHE_KEY, JSON.stringify(fresh)); } catch (e) { /* cache is optional */ }
@@ -691,40 +698,36 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeWebsite();
 });
 
+function safeInit(name, fn) {
+    try { fn(); } catch (e) { console.error('Startup step failed: ' + name, e); }
+}
+
 function initializeWebsite() {
-    // Load store data (published file / admin draft / defaults)
-    loadStore();
-    initializeAdminTriggers();
+    // Loading screen FIRST, so it always gets hidden even if a later step fails
+    safeInit('loading screen', initializeLoadingScreen);
     
-    // Initialize loading screen
-    initializeLoadingScreen();
-    
-    // Initialize navigation
-    initializeNavigation();
-    
-    // Initialize cart
-    initializeCart();
-    
-    // Initialize products
-    initializeProducts();
-    
-    // Initialize search
-    initializeSearch();
-    
-    // Initialize forms
-    initializeForms();
-    
-    // Initialize animations
-    initializeAnimations();
-    
-    // Initialize modals
-    initializeModals();
-    
-    // Initialize scroll effects
-    initializeScrollEffects();
-    
-    // Initialize retry queue processing
-    initializeRetryQueue();
+    // Load store data (Supabase / cache / defaults)
+    try {
+        loadStore();
+    } catch (e) {
+        console.error('Could not load store data, using built-in defaults', e);
+        sb = null;
+        storeLoading = false;
+        STORE = normalizeStore({});
+        safeInit('products', rebuildProducts);
+        safeInit('page', applyStoreToPage);
+    }
+    safeInit('admin triggers', initializeAdminTriggers);
+    safeInit('navigation', initializeNavigation);
+    safeInit('cart', initializeCart);
+    safeInit('products', initializeProducts);
+    safeInit('search', initializeSearch);
+    safeInit('forms', initializeForms);
+    safeInit('animations', initializeAnimations);
+    safeInit('modals', initializeModals);
+    safeInit('scroll effects', initializeScrollEffects);
+    safeInit('retry queue', initializeRetryQueue);
+    safeInit('pending payment', initializePendingPayment);
     
     console.log('✅ BLKPAPER Store Ready!');
 }
@@ -1270,6 +1273,8 @@ function resetFilters() {
 function quickView(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
+    const heading = document.getElementById('modalTitle');
+    if (heading) heading.textContent = 'Product Details';
     selectedSize = null;
     const lowAt = Number(STORE.settings.lowStockAt) || 0;
     const sizeHTML = product.sizes ? `
@@ -1521,7 +1526,7 @@ function showCheckoutModal() {
                         <span>৳${total.toLocaleString()}</span>
                     </div>
                 </div>
-                <button class="btn btn-primary btn-large" onclick="submitOrder()" style="width: 100%; margin-top: 24px;">
+                <button class="btn btn-primary btn-large" id="placeOrderBtn" onclick="submitOrder()" style="width: 100%; margin-top: 24px;">
                     <i class="fas fa-check"></i>
                     Place Order
                 </button>
@@ -1531,6 +1536,260 @@ function showCheckoutModal() {
     
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
+    
+    const payChoice = document.querySelector('#checkoutForm [name="paymentMethod"]');
+    if (payChoice) payChoice.addEventListener('change', updateCheckoutButtonLabel);
+}
+
+// ===== BKASH PAYMENT (QR + Transaction ID check) =====
+const PENDING_PAY_KEY = 'blkpaper_pending_payment';
+let currentBkashOrder = null;
+let bkashTimerId = null;
+let chipTimerId = null;
+
+function bkashActive() {
+    return !!(sb && STORE && STORE.settings && STORE.settings.bkashNumber);
+}
+
+function savePendingPayment(order) {
+    try { localStorage.setItem(PENDING_PAY_KEY, JSON.stringify({ order: order, expiresAt: order.expiresAt })); } catch (e) { /* ignore */ }
+}
+
+function getPendingPayment() {
+    try {
+        const p = JSON.parse(localStorage.getItem(PENDING_PAY_KEY));
+        if (!p || !p.order || !p.expiresAt) return null;
+        if (new Date(p.expiresAt).getTime() <= Date.now()) { localStorage.removeItem(PENDING_PAY_KEY); return null; }
+        return p;
+    } catch (e) { return null; }
+}
+
+function clearPendingPayment() {
+    localStorage.removeItem(PENDING_PAY_KEY);
+    renderPendingChip();
+}
+
+function formatCountdown(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+}
+
+function showBkashPayment(order) {
+    currentBkashOrder = order;
+    const modal = document.getElementById('productModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const st = STORE.settings;
+    const number = escAttr(st.bkashNumber);
+    if (modalTitle) modalTitle.textContent = 'Pay with bKash';
+    const qr = st.bkashQr
+        ? `<img class="bkash-qr" src="${escAttr(st.bkashQr)}" alt="bKash QR code">`
+        : `<div class="bkash-qr bkash-qr-missing"><i class="fas fa-qrcode"></i><span>Send money to the number below</span></div>`;
+    
+    modalBody.innerHTML = `
+        <div class="bkash-pay">
+            <div class="bkash-head">
+                <div class="bkash-logo">bKash</div>
+                <div class="bkash-amount"><small>Amount to pay</small><strong>৳${Number(order.total).toLocaleString()}</strong></div>
+            </div>
+            <div class="bkash-timer" id="bkashTimer">Your items are reserved for <b id="bkashCountdown">--:--</b></div>
+            <div class="bkash-body">
+                <div class="bkash-qrbox">
+                    ${qr}
+                    <div class="bkash-num"><span>${number}</span><button type="button" onclick="copyBkashNumber()"><i class="fas fa-copy"></i> Copy</button></div>
+                    ${st.bkashName ? `<small>${escAttr(st.bkashName)}</small>` : ''}
+                </div>
+                <ol class="bkash-steps">
+                    <li>Open the <b>bKash app</b> and <b>scan the QR code</b> (or choose <b>Send Money</b> and enter the number).</li>
+                    <li>Send exactly <b>৳${Number(order.total).toLocaleString()}</b>.</li>
+                    <li>Copy the <b>Transaction ID (TrxID)</b> from the bKash confirmation message.</li>
+                    <li>Paste it below and press <b>Verify payment</b>.</li>
+                </ol>
+            </div>
+            <div class="bkash-verify">
+                <input type="text" id="bkashTrx" placeholder="Transaction ID  (e.g. 9A1B2C3D4E)" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                       onkeydown="if(event.key==='Enter'){verifyBkashPayment()}">
+                <button type="button" class="btn btn-primary" id="bkashVerifyBtn" onclick="verifyBkashPayment()"><i class="fas fa-shield-check"></i> Verify payment</button>
+            </div>
+            <div class="bkash-msg" id="bkashMsg"></div>
+            <div class="bkash-foot">
+                <span>Order <b>${order.id}</b></span>
+                <button type="button" onclick="cancelBkashOrder()">Cancel order</button>
+            </div>
+        </div>`;
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    startBkashTimer(order);
+    renderPendingChip();
+    setTimeout(() => { const i = document.getElementById('bkashTrx'); if (i) i.focus(); }, 100);
+}
+
+function copyBkashNumber() {
+    const n = STORE.settings.bkashNumber || '';
+    try { navigator.clipboard.writeText(n); showToast('bKash number copied', 'success'); }
+    catch (e) { showToast(n, 'info'); }
+}
+
+function startBkashTimer(order) {
+    clearInterval(bkashTimerId);
+    const tick = () => {
+        const left = new Date(order.expiresAt).getTime() - Date.now();
+        const el = document.getElementById('bkashCountdown');
+        if (el) el.textContent = formatCountdown(left);
+        if (left <= 0) {
+            clearInterval(bkashTimerId);
+            handleBkashExpired(order);
+        }
+    };
+    tick();
+    bkashTimerId = setInterval(tick, 1000);
+}
+
+async function handleBkashExpired(order) {
+    try { await sb.rpc('expire_unpaid_orders'); } catch (e) { /* ignore */ }
+    localStorage.removeItem(PENDING_PAY_KEY);
+    renderPendingChip();
+    const body = document.getElementById('modalBody');
+    if (body && document.getElementById('productModal').classList.contains('show') && currentBkashOrder && currentBkashOrder.id === order.id && document.getElementById('bkashMsg')) {
+        body.innerHTML = `
+            <div class="order-confirmation">
+                <div class="confirmation-icon"><i class="fas fa-clock" style="font-size: 4rem; color: var(--accent-warning);"></i></div>
+                <h2>Payment time ran out</h2>
+                <p>Your order <strong>${order.id}</strong> was cancelled and the items were released.<br>
+                If you already sent the money, please contact us with your Transaction ID and we will confirm it quickly.</p>
+                <div class="confirmation-actions">
+                    <button class="btn btn-primary" onclick="closeModal()"><i class="fas fa-store"></i> Back to shop</button>
+                </div>
+            </div>`;
+    }
+    refreshFromServer(true);
+}
+
+function setBkashMsg(text, type) {
+    const el = document.getElementById('bkashMsg');
+    if (!el) return;
+    el.className = 'bkash-msg ' + (type || '');
+    el.textContent = text || '';
+}
+
+async function verifyBkashPayment() {
+    const order = currentBkashOrder;
+    const input = document.getElementById('bkashTrx');
+    const btn = document.getElementById('bkashVerifyBtn');
+    if (!order || !input) return;
+    const trx = input.value.trim();
+    if (!trx) { setBkashMsg('Please enter your bKash Transaction ID.', 'error'); input.focus(); return; }
+    
+    const label = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking payment…';
+    setBkashMsg('');
+    try {
+        const { data, error } = await sb.rpc('verify_bkash_payment', { p_order: order.id, p_trx: trx });
+        if (error) throw error;
+        if (data && data.ok) {
+            onBkashPaid(order, data);
+            return;
+        }
+        setBkashMsg((data && data.message) || 'We could not verify this payment.', 'error');
+        if (data && (data.code === 'expired')) handleBkashExpired(order);
+    } catch (e) {
+        console.error('bKash verify failed', e);
+        setBkashMsg('Could not check the payment right now. Please try again.', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = label;
+}
+
+function onBkashPaid(order, result) {
+    clearInterval(bkashTimerId);
+    localStorage.removeItem(PENDING_PAY_KEY);
+    order.status = 'confirmed';
+    order.paymentStatus = 'paid';
+    order.paymentTrx = result.trx;
+    currentBkashOrder = null;
+    renderPendingChip();
+    
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Payment Confirmed';
+    document.getElementById('modalBody').innerHTML = `
+        <div class="order-confirmation bkash-success">
+            <div class="confirmation-icon"><i class="fas fa-circle-check" style="font-size: 4.5rem; color: var(--accent-success);"></i></div>
+            <h2>Payment Confirmed!</h2>
+            <p>We received your bKash payment and your order is now <strong>confirmed</strong>.</p>
+            <div class="order-details">
+                <div class="detail-row"><span>Order ID:</span><span><strong>${order.id}</strong></span></div>
+                <div class="detail-row"><span>Amount paid:</span><span><strong>৳${Number(order.total).toLocaleString()}</strong></span></div>
+                <div class="detail-row"><span>bKash TrxID:</span><span><strong>${escAttr(result.trx)}</strong></span></div>
+                <div class="detail-row"><span>Estimated Delivery:</span><span>${new Date(order.estimatedDelivery).toLocaleDateString()}</span></div>
+            </div>
+            <div class="confirmation-actions">
+                <button class="btn btn-primary" onclick="closeModal(); scrollToSection('#home');"><i class="fas fa-home"></i> Continue Shopping</button>
+                <button class="btn btn-outline" onclick="trackOrder('${order.id}')"><i class="fas fa-truck"></i> Track Order</button>
+            </div>
+        </div>`;
+    showToast('Payment confirmed — your order is confirmed!', 'success');
+    sendOrderToGoogleSheets(order);
+    sendWhatsAppNotification(order);
+    refreshFromServer(true);
+}
+
+async function cancelBkashOrder() {
+    const order = currentBkashOrder;
+    if (!order) return;
+    if (!confirm('Cancel this order? Your items will be released.')) return;
+    try { await sb.rpc('cancel_unpaid_order', { p_id: order.id }); } catch (e) { /* expires on its own */ }
+    clearInterval(bkashTimerId);
+    currentBkashOrder = null;
+    localStorage.removeItem(PENDING_PAY_KEY);
+    closeModal();
+    showToast('Order cancelled. Your items were released.', 'info');
+    refreshFromServer(true);
+}
+
+// A small button lets the customer come back to an unpaid bKash order after closing the window
+function renderPendingChip() {
+    let chip = document.getElementById('bkashChip');
+    const p = getPendingPayment();
+    const modalOpen = document.getElementById('productModal') && document.getElementById('productModal').classList.contains('show');
+    if (!p || modalOpen) { if (chip) chip.style.display = 'none'; return; }
+    if (!chip) {
+        chip = document.createElement('button');
+        chip.id = 'bkashChip';
+        chip.type = 'button';
+        chip.className = 'bkash-chip';
+        chip.onclick = resumeBkashPayment;
+        document.body.appendChild(chip);
+    }
+    chip.style.display = '';
+    chip.innerHTML = `<i class="fas fa-mobile-screen-button"></i> Complete bKash payment · <b>${formatCountdown(new Date(p.expiresAt).getTime() - Date.now())}</b>`;
+}
+
+function resumeBkashPayment() {
+    const p = getPendingPayment();
+    if (p) showBkashPayment(p.order);
+}
+
+function initializePendingPayment() {
+    renderPendingChip();
+    clearInterval(chipTimerId);
+    chipTimerId = setInterval(() => {
+        const raw = localStorage.getItem(PENDING_PAY_KEY);
+        if (raw && !getPendingPayment()) {
+            showToast('Your unpaid bKash order expired and the items were released.', 'info');
+            if (sb) { sb.rpc('expire_unpaid_orders').then(() => refreshFromServer(true), () => {}); }
+        }
+        renderPendingChip();
+    }, 1000);
+}
+
+function updateCheckoutButtonLabel() {
+    const sel = document.querySelector('#checkoutForm [name="paymentMethod"]');
+    const btn = document.getElementById('placeOrderBtn');
+    if (!sel || !btn) return;
+    btn.innerHTML = (sel.value === 'bkash' && bkashActive())
+        ? '<i class="fas fa-mobile-screen-button"></i> Continue to bKash Payment'
+        : '<i class="fas fa-check"></i> Place Order';
 }
 
 async function submitOrder() {
@@ -1598,6 +1857,17 @@ async function submitOrder() {
                 orderDate: data.created_at,
                 estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days from now
             };
+            if (data.status === 'awaiting_payment') {
+                // bKash: the items are reserved for a few minutes — now the customer pays and enters the Transaction ID
+                order.status = 'awaiting_payment';
+                order.expiresAt = data.payment_expires_at;
+                clearCart();
+                removeCoupon();
+                savePendingPayment(order);
+                showBkashPayment(order);
+                refreshFromServer(true);
+                return;
+            }
             // Optional extra copy to your Google Sheet (does not affect the order)
             sendOrderToGoogleSheets(order);
         } else {
@@ -1832,6 +2102,8 @@ Thank you for choosing BLKPAPER! 🖤`;
 function showOrderConfirmation(order) {
     const modal = document.getElementById('productModal');
     const modalBody = document.getElementById('modalBody');
+    const heading = document.getElementById('modalTitle');
+    if (heading) heading.textContent = 'Order Confirmed';
     
     modalBody.innerHTML = `
         <div class="order-confirmation">
@@ -1955,6 +2227,7 @@ function closeModal() {
     const modal = document.getElementById('productModal');
     modal.classList.remove('show');
     document.body.style.overflow = '';
+    if (typeof renderPendingChip === 'function') renderPendingChip();
 }
 
 // ===== ANIMATIONS =====

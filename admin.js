@@ -191,6 +191,8 @@
 #blkAdmin .ba-nav button.active .ba-count { background: #dc3545; }
 @media (max-width: 860px) { #blkAdmin .ba-count { margin-left: 4px; } }
 
+#blkAdmin .ba-note.warn { background: #fff8e1; color: #6d5200; }
+#blkAdmin #stQrPrev { width: 110px; height: 110px; object-fit: contain; background: #fff; }
 `;
     function injectStyles() {
         if (document.getElementById('blkAdminStyles')) return;
@@ -205,7 +207,7 @@
     const FAIL_KEY = 'blkpaper_admin_fail';
     const CATS = { 'clothing': 'Clothing', 'sunglasses': 'Sunglasses', 'accessories': 'Accessories', 'memory-band': 'Memory Band' };
     const STATUS = {
-        pending: ['New', 'amber'], confirmed: ['Confirmed', 'green'], shipped: ['Shipped', ''],
+        awaiting_payment: ['Awaiting payment', 'amber'], pending: ['New', 'amber'], confirmed: ['Confirmed', 'green'], shipped: ['Shipped', ''],
         delivered: ['Delivered', 'green'], cancelled: ['Cancelled', 'red']
     };
     const NEXT = { pending: ['confirmed', 'Confirm order'], confirmed: ['shipped', 'Mark as shipped'], shipped: ['delivered', 'Mark as delivered'] };
@@ -232,6 +234,9 @@
     // ---------- state ----------
     let S = { products: [], settings: {}, sale: {}, coupons: [] };
     let orders = [];
+    let payments = [];
+    let stQr = '';
+    const paidToasted = {};
     let root = null, channel = null, panelOpen = false, listening = false;
     let ui = { tab: 'dashboard', q: '', cat: 'all', lowOnly: false, couponIdx: -1, orderFilter: 'all' };
     let edImage = '', edId = null, edOrigImage = '', edOrigSig = '';
@@ -270,12 +275,17 @@
         if (!r) return;
         S.coupons = (r.data || []).map(c => ({ code: c.code, type: c.type, value: Number(c.value), minOrder: Number(c.min_order) || 0, expires: c.expires || '', note: c.note || '', active: c.active }));
     }
+    async function pullPayments() {
+        const r = await run(sb().from('bkash_payments').select('*').order('received_at', { ascending: false }).limit(300));
+        if (r) payments = r.data || [];
+    }
     async function pullOrders() {
+        try { await sb().rpc('expire_unpaid_orders'); } catch (e) { /* ignore */ }
         const r = await run(sb().from('orders').select('*').order('created_at', { ascending: false }).limit(300));
         if (r) orders = r.data || [];
     }
     async function loadAll() {
-        try { await Promise.all([pullStore(), pullCoupons(), pullOrders()]); }
+        try { await Promise.all([pullStore(), pullCoupons(), pullOrders(), pullPayments()]); }
         catch (e) { toast('Could not load data: ' + (e.message || e), 'error'); }
     }
     // after any change: reload admin data and refresh the shop behind the panel
@@ -343,6 +353,7 @@
     const NAV = [
         ['dashboard', 'fa-gauge', 'Dashboard'],
         ['orders', 'fa-receipt', 'Orders'],
+        ['payments', 'fa-money-bill-wave', 'bKash Payments'],
         ['products', 'fa-shirt', 'Products'],
         ['stock', 'fa-boxes-stacked', 'Stock'],
         ['offers', 'fa-tags', 'Offers & Coupons'],
@@ -394,9 +405,9 @@
         if (!v) return;
         const y = v.scrollTop;
         root.querySelectorAll('.ba-nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-        const titles = { dashboard: 'Dashboard', orders: 'Orders', products: 'Products', stock: 'Stock by size', offers: 'Offers & Coupons', settings: 'Site Settings' };
+        const titles = { dashboard: 'Dashboard', orders: 'Orders', payments: 'bKash Payments', products: 'Products', stock: 'Stock by size', offers: 'Offers & Coupons', settings: 'Site Settings' };
         $('#baTitle').textContent = titles[tab];
-        ({ dashboard: renderDashboard, orders: renderOrders, products: renderProducts, stock: renderStock, offers: renderOffers, settings: renderSettings })[tab](v);
+        ({ dashboard: renderDashboard, orders: renderOrders, payments: renderPayments, products: renderProducts, stock: renderStock, offers: renderOffers, settings: renderSettings })[tab](v);
         v.scrollTop = keepScroll ? y : 0;
     }
 
@@ -405,12 +416,23 @@
         stopLive();
         try {
             channel = sb().channel('blk-admin-orders')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
                     const o = payload.new || {};
-                    toast(`🛒 New order ${o.id || ''} — ${money(o.total)}`, 'success');
-                    await pullOrders();
+                    if (payload.eventType === 'INSERT') {
+                        toast(`🛒 New order ${o.id || ''} — ${money(o.total)}${o.status === 'awaiting_payment' ? ' (waiting for bKash payment)' : ''}`, 'success');
+                    } else if (payload.eventType === 'UPDATE' && o.payment_status === 'paid' && o.paid_at && Date.now() - new Date(o.paid_at).getTime() < 20000 && !paidToasted[o.id]) {
+                        paidToasted[o.id] = true;
+                        toast(`💚 bKash payment confirmed — order ${o.id} (${money(o.total)})`, 'success');
+                    }
+                    await Promise.all([pullOrders(), pullPayments()]);
                     updateNavBadge();
-                    if (panelOpen && ['orders', 'dashboard'].includes(ui.tab) && !$('#baModal')) renderTab(ui.tab, true);
+                    if (panelOpen && ['orders', 'dashboard', 'payments'].includes(ui.tab) && !$('#baModal')) renderTab(ui.tab, true);
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bkash_payments' }, async (payload) => {
+                    const p = payload.new || {};
+                    toast(`💰 bKash received ${money(p.amount)} (${p.trx_id || ''})`, 'success');
+                    await pullPayments();
+                    if (panelOpen && ui.tab === 'payments' && !$('#baModal')) renderTab('payments', true);
                 })
                 .subscribe();
         } catch (e) { /* realtime optional */ }
@@ -455,6 +477,7 @@
         const units = S.products.reduce((a, p) => a + prodStock(p), 0);
         const saleStatus = window.getSaleStatus(S.sale);
         const pending = orders.filter(o => o.status === 'pending').length;
+        const awaiting = orders.filter(o => o.status === 'awaiting_payment').length;
         const today = new Date().toDateString();
         const todays = orders.filter(o => o.status !== 'cancelled' && new Date(o.created_at).toDateString() === today);
         const revenue = orders.filter(o => o.status !== 'cancelled').reduce((a, o) => a + Number(o.total), 0);
@@ -463,6 +486,7 @@
         v.innerHTML = `
             <div class="ba-stats">
                 <div class="ba-stat ${pending ? 'warn' : ''}"><span>New orders to confirm</span><strong>${pending}</strong></div>
+                <div class="ba-stat ${awaiting ? 'warn' : ''}"><span>Waiting for bKash payment</span><strong>${awaiting}</strong></div>
                 <div class="ba-stat"><span>Orders today</span><strong>${todays.length}</strong></div>
                 <div class="ba-stat"><span>Sales today</span><strong>${money(todays.reduce((a, o) => a + Number(o.total), 0))}</strong></div>
                 <div class="ba-stat"><span>Total sales (excl. cancelled)</span><strong>${money(revenue)}</strong></div>
@@ -513,7 +537,7 @@
                             <td>${esc(o.full_name)}<br><small style="color:#9ca3af">${esc(o.phone)}</small></td>
                             <td>${qty} item${qty === 1 ? '' : 's'}</td>
                             <td><b>${money(o.total)}</b></td>
-                            <td>${esc(String(o.payment_method).toUpperCase())}</td>
+                            <td>${esc(String(o.payment_method).toUpperCase())}${o.payment_method === 'bkash' ? (o.payment_status === 'paid' ? '<br><span class="ba-pill green">Paid ✔</span>' : '<br><span class="ba-pill amber">Unpaid</span>') : ''}</td>
                             <td><span class="ba-pill ${st[1]}">${esc(st[0])}</span></td>
                             <td><button class="ba-btn ghost sm" data-act="order-view" data-id="${esc(o.id)}">View</button></td></tr>`;
                     }).join('');
@@ -534,6 +558,7 @@
                         <div><small style="color:#6b7280">CUSTOMER</small><br><b>${esc(o.full_name)}</b><br>${esc(o.phone)}<br>${esc(o.email || '')}</div>
                         <div><small style="color:#6b7280">DELIVER TO</small><br>${esc(o.address)}<br>${esc(o.city)}<br><small style="color:#6b7280">Payment: ${esc(String(o.payment_method).toUpperCase())}</small></div>
                         ${o.notes ? `<div class="ba-span2 ba-note"><b>Note:</b> ${esc(o.notes)}</div>` : ''}
+                        ${['bkash', 'nagad'].includes(o.payment_method) ? `<div class="ba-span2 ba-note ${o.payment_status === 'paid' ? '' : 'warn'}"><b>${esc(String(o.payment_method).toUpperCase())} payment:</b> ${o.payment_status === 'paid' ? `Paid ✔${o.payment_trx ? ' — TrxID <b>' + esc(o.payment_trx) + '</b>' : ''}${o.paid_at ? ' · ' + esc(fmtDate(o.paid_at)) : ''}` : (o.status === 'awaiting_payment' ? 'Waiting for the customer to pay and enter the Transaction ID.' : 'Not paid yet.')}</div>` : ''}
                     </div>
                     <div class="ba-tablewrap"><table class="ba-table" style="min-width:420px"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
                         ${(o.items || []).map(l => `<tr><td>${esc(l.name)}${l.size ? ` <span class="ba-chip">${esc(l.size)}</span>` : ''}</td><td>${l.qty}</td><td>${money(l.unit_price)}</td><td>${money(l.line_total)}</td></tr>`).join('')}
@@ -545,11 +570,24 @@
                         <span style="font-size:18px">Total: <b>${money(o.total)}</b></span>
                     </div>
                     <div class="ba-formactions">
+                        ${['bkash', 'nagad'].includes(o.payment_method) && o.payment_status !== 'paid' && o.status !== 'cancelled' ? `<button class="ba-btn green" data-act="order-markpaid" data-id="${esc(o.id)}"><i class="fas fa-check"></i> Mark as paid &amp; confirm</button>` : ''}
                         ${next ? `<button class="ba-btn green" data-act="order-status" data-id="${esc(o.id)}" data-s="${next[0]}">${next[1]}</button>` : ''}
                         ${o.status !== 'cancelled' ? `<button class="ba-btn danger" data-act="order-cancel" data-id="${esc(o.id)}"><i class="fas fa-ban"></i> Cancel &amp; restock</button>` : ''}
                         <button class="ba-btn ghost" data-act="close-editor">Close</button>
                     </div>
                 </div></div></div>`;
+    }
+
+    async function markOrderPaid(id) {
+        const trx = prompt('bKash Transaction ID (optional — leave empty if you do not have it):');
+        if (trx === null) return;
+        const r = await run(sb().rpc('admin_mark_paid', { p_id: id, p_trx: trx.trim() || null }));
+        if (!r) return;
+        closeEditor();
+        await Promise.all([pullOrders(), pullPayments(), afterWrite()]);
+        updateNavBadge();
+        renderTab(ui.tab, true);
+        toast('Marked as paid — order confirmed.', 'success');
     }
 
     async function setOrderStatus(id, status) {
@@ -560,6 +598,53 @@
         updateNavBadge();
         renderTab(ui.tab, true);
         toast(status === 'cancelled' ? 'Order cancelled — stock put back.' : 'Order updated.', 'success');
+    }
+
+    // ---------- bKash payments ----------
+    function renderPayments(v) {
+        const unused = payments.filter(p => !p.used_order).length;
+        v.innerHTML = `
+            <div class="ba-note" style="margin-bottom:16px">This is the money that really reached your bKash. When a customer types a Transaction ID at checkout, the shop matches the <b>ID + exact amount</b> with this list and confirms the order automatically.
+            It fills itself if you set up the SMS webhook (see SETUP.md) — or you can add a payment by hand below.</div>
+            <div class="ba-card">
+                <h3>Add a received payment by hand</h3>
+                <div class="ba-grid3" style="margin-top:10px">
+                    <label class="ba-f">Transaction ID (TrxID)<input type="text" id="bpTrx" placeholder="9A1B2C3D4E" style="text-transform:uppercase"></label>
+                    <label class="ba-f">Amount (৳)<input type="number" id="bpAmount" min="1" step="1"></label>
+                    <label class="ba-f">Sender number (optional)<input type="text" id="bpSender" placeholder="017XXXXXXXX"></label>
+                </div>
+                <div class="ba-formactions"><button class="ba-btn" data-act="payment-add">Add payment</button></div>
+            </div>
+            <div class="ba-card" style="padding:0">
+                <div style="padding:16px 20px 0"><h3>Received payments <span class="ba-pill ${unused ? 'amber' : ''}">${unused} not used yet</span></h3></div>
+                <div class="ba-tablewrap" style="border:none;border-radius:0 0 14px 14px"><table class="ba-table" style="min-width:680px">
+                    <thead><tr><th>TrxID</th><th>Amount</th><th>From</th><th>Received</th><th>Source</th><th>Used for</th><th></th></tr></thead>
+                    <tbody>${payments.length ? payments.map(p => `<tr>
+                        <td><b>${esc(p.trx_id)}</b></td><td>${money(p.amount)}</td><td>${esc(p.sender || '—')}</td>
+                        <td>${esc(fmtDate(p.received_at))}</td><td>${p.source === 'sms' ? '<span class="ba-pill green">SMS</span>' : '<span class="ba-pill">Manual</span>'}</td>
+                        <td>${p.used_order ? `<span class="ba-pill green">Order ${esc(p.used_order)}</span>` : '<span class="ba-pill amber">Not used yet</span>'}</td>
+                        <td>${p.used_order ? '' : `<button class="ba-btn danger sm" data-act="payment-delete" data-id="${esc(p.trx_id)}"><i class="fas fa-trash"></i></button>`}</td></tr>`).join('') : '<tr><td colspan="7"><div class="ba-empty">No payments recorded yet.</div></td></tr>'}</tbody>
+                </table></div>
+            </div>`;
+    }
+
+    async function addManualPayment() {
+        const trx = $('#bpTrx').value.trim().toUpperCase().replace(/\s+/g, '');
+        const amount = Number($('#bpAmount').value);
+        if (!/^[A-Z0-9]{6,20}$/.test(trx)) { toast('Enter a valid Transaction ID (6–20 letters/numbers).', 'error'); return; }
+        if (!(amount > 0)) { toast('Enter the amount you received.', 'error'); return; }
+        const r = await run(sb().from('bkash_payments').insert({ trx_id: trx, amount, sender: $('#bpSender').value.trim() || null, source: 'manual' }), 'Payment added.');
+        if (!r) return;
+        await pullPayments();
+        renderPayments($('#baView'));
+    }
+
+    async function deletePayment(trx) {
+        if (!confirm(`Delete payment ${trx}?`)) return;
+        const r = await run(sb().from('bkash_payments').delete().eq('trx_id', trx));
+        if (!r) return;
+        await pullPayments();
+        renderPayments($('#baView'));
     }
 
     // ---------- Products ----------
@@ -716,7 +801,8 @@
     }
 
     // resize the photo in the browser, then upload it to Supabase Storage
-    function resizeToBlob(file) {
+    function resizeToBlob(file, opts) {
+        opts = opts || {};
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onerror = () => reject(new Error('Could not read the file.'));
@@ -724,13 +810,13 @@
                 const img = new Image();
                 img.onerror = () => reject(new Error('That file is not a valid image.'));
                 img.onload = () => {
-                    const max = 1200;
+                    const max = opts.max || 1200;
                     const scale = Math.min(1, max / Math.max(img.width, img.height));
                     const c = document.createElement('canvas');
                     c.width = Math.round(img.width * scale);
                     c.height = Math.round(img.height * scale);
                     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                    c.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not process the image.'))), 'image/jpeg', 0.85);
+                    c.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not process the image.'))), 'image/jpeg', opts.quality || 0.85);
                 };
                 img.src = reader.result;
             };
@@ -738,9 +824,10 @@
         });
     }
 
-    async function uploadImage(file) {
-        const blob = await resizeToBlob(file);
-        const path = `p/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    async function uploadImage(file, opts) {
+        opts = opts || {};
+        const blob = await resizeToBlob(file, opts);
+        const path = `${opts.folder || 'p'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
         const { error } = await sb().storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
         if (error) throw error;
         return sb().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
@@ -938,6 +1025,7 @@
     // ---------- Settings ----------
     function renderSettings(v) {
         const s = S.settings;
+        stQr = s.bkashQr || '';
         v.innerHTML = `
             <div class="ba-card">
                 <h3>Shipping & stock</h3>
@@ -946,6 +1034,26 @@
                     <label class="ba-f">Free shipping over (৳)<input type="number" id="stFree" min="0" value="${esc(s.freeShippingOver)}"><small>0 = no free shipping</small></label>
                     <label class="ba-f">“Low stock” at or below<input type="number" id="stLow" min="0" value="${esc(s.lowStockAt)}"><small>Shows “Only N left” to customers</small></label>
                     <label class="ba-f ba-span2" style="grid-column:1/-1">Size options for new products<input type="text" id="stSizes" value="${esc((s.sizeOptions || []).join(', '))}"><small>Comma separated, e.g. S, M, L, XL, XXL</small></label>
+                </div>
+            </div>
+            <div class="ba-card">
+                <h3>bKash online payment</h3>
+                <p class="ba-sub">When a bKash number is set, customers who choose bKash see a payment window with your QR code, enter their Transaction ID, and the order is confirmed automatically once the matching payment is found in <b>bKash Payments</b>. Leave the number empty to switch this off.</p>
+                <div class="ba-grid2">
+                    <label class="ba-f">bKash number<input type="text" id="stBkNum" value="${esc(s.bkashNumber)}" placeholder="01XXXXXXXXX"></label>
+                    <label class="ba-f">Account name (optional)<input type="text" id="stBkName" value="${esc(s.bkashName)}" placeholder="BLKPAPER"></label>
+                    <label class="ba-f">Keep items reserved for (minutes)<input type="number" id="stBkHold" min="3" max="120" value="${esc(s.bkashHoldMinutes || 15)}"><small>Unpaid orders are cancelled after this and the stock is released.</small></label>
+                    <div class="ba-f">Your bKash QR code image
+                        <div class="ba-imgrow">
+                            <img id="stQrPrev" src="${esc(stQr)}" alt="" style="${stQr ? '' : 'display:none'}">
+                            <div class="ba-imginputs">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ba-btn ghost sm" data-act="qr-pick"><i class="fas fa-upload"></i> Upload QR</button>
+                                <button type="button" class="ba-btn ghost sm" data-act="qr-remove">Remove</button></div>
+                                <input type="file" id="stQrFile" accept="image/*" style="display:none">
+                                <small id="stQrInfo">Screenshot or download the QR from your bKash app, then upload it here.</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="ba-card">
@@ -984,7 +1092,11 @@
             phone: $('#stPhone').value.trim(),
             email: $('#stEmail').value.trim(),
             address: $('#stAddr').value.trim(),
-            whatsapp: $('#stWa').value.trim()
+            whatsapp: $('#stWa').value.trim(),
+            bkashNumber: $('#stBkNum').value.trim(),
+            bkashName: $('#stBkName').value.trim(),
+            bkashQr: stQr,
+            bkashHoldMinutes: Math.min(120, Math.max(3, parseInt($('#stBkHold').value) || 15))
         });
         const r = await run(sb().from('settings').upsert({ key: 'store', value: settings }), 'Settings saved — live now.');
         if (!r) return;
@@ -1059,6 +1171,11 @@
         'order-filter': (b) => { ui.orderFilter = b.dataset.f; renderOrders($('#baView')); },
         'order-view': (b) => openOrder(b.dataset.id),
         'order-status': (b) => setOrderStatus(b.dataset.id, b.dataset.s),
+        'order-markpaid': (b) => markOrderPaid(b.dataset.id),
+        'payment-add': () => addManualPayment(),
+        'payment-delete': (b) => deletePayment(b.dataset.id),
+        'qr-pick': () => $('#stQrFile').click(),
+        'qr-remove': () => { stQr = ''; $('#stQrPrev').style.display = 'none'; $('#stQrInfo').textContent = 'QR removed — click Save settings.'; },
         'order-cancel': (b) => {
             if (!confirm('Cancel this order and put the items back in stock?')) return;
             setOrderStatus(b.dataset.id, 'cancelled');
@@ -1115,6 +1232,17 @@
                 const row = t.closest('.ba-sizerow');
                 row.classList.toggle('off', !t.checked);
                 $('.ba-sz-qty', row).disabled = !t.checked;
+            }
+            else if (t.id === 'stQrFile' && t.files[0]) {
+                const info = $('#stQrInfo');
+                info.textContent = 'Uploading…';
+                try {
+                    stQr = await uploadImage(t.files[0], { max: 900, quality: 0.95, folder: 'qr' });
+                    const prev = $('#stQrPrev');
+                    prev.src = stQr; prev.style.display = '';
+                    info.textContent = 'QR uploaded ✔ — click Save settings.';
+                } catch (err) { info.textContent = ''; toast('Upload failed: ' + (err.message || err), 'error'); }
+                t.value = '';
             }
             else if (t.id === 'peFile' && t.files[0]) {
                 const info = $('#peImgInfo'), btn = $('#peUploadBtn');

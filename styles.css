@@ -2190,3 +2190,39 @@ body.has-announcement .hero { padding-top: calc(var(--header-height) + 38px); }
 .product-quick-view { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
 .quick-view-image img { width: 100%; border-radius: var(--border-radius-lg); display: block; }
 @media (max-width: 768px) { .product-quick-view { grid-template-columns: 1fr; gap: 20px; } }
+
+/* ===== bKash payment window ===== */
+.bkash-pay { max-width: 560px; margin: 0 auto; }
+.bkash-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #e2136e; color: #fff; border-radius: var(--border-radius-lg); padding: 16px 20px; }
+.bkash-logo { font-family: var(--font-display, inherit); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.5px; }
+.bkash-amount { text-align: right; }
+.bkash-amount small { display: block; opacity: 0.85; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.bkash-amount strong { font-size: 1.7rem; line-height: 1.1; }
+.bkash-timer { text-align: center; font-size: 13px; color: var(--gray-600); margin: 12px 0; }
+.bkash-timer b { color: #e2136e; font-variant-numeric: tabular-nums; }
+.bkash-body { display: grid; grid-template-columns: 190px 1fr; gap: 20px; align-items: start; }
+.bkash-qrbox { text-align: center; }
+.bkash-qr { width: 190px; height: 190px; object-fit: contain; border: 2px solid #f4c1d8; border-radius: 14px; background: #fff; display: block; }
+.bkash-qr-missing { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #e2136e; font-size: 13px; padding: 12px; }
+.bkash-qr-missing i { font-size: 3rem; }
+.bkash-num { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.5px; }
+.bkash-num button { background: #fdeaf3; color: #e2136e; border: none; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.bkash-qrbox small { color: var(--gray-600); }
+.bkash-steps { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--gray-700); }
+.bkash-steps li { margin-bottom: 8px; }
+.bkash-verify { display: flex; gap: 10px; margin-top: 18px; }
+.bkash-verify input { flex: 1; min-width: 0; padding: 14px 16px; border: 2px solid var(--gray-300); border-radius: var(--border-radius); font-size: 15px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.bkash-verify input:focus { outline: none; border-color: #e2136e; }
+.bkash-verify .btn { background: #e2136e; border-color: #e2136e; color: #fff; white-space: nowrap; }
+.bkash-verify .btn:hover:not(:disabled) { background: #c10f5d; border-color: #c10f5d; }
+.bkash-msg { min-height: 22px; margin-top: 12px; font-size: 14px; font-weight: 500; }
+.bkash-msg.error { color: var(--accent-danger); background: #fdecee; padding: 10px 14px; border-radius: var(--border-radius); }
+.bkash-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 13px; color: var(--gray-600); }
+.bkash-foot button { background: none; border: none; color: var(--accent-danger); text-decoration: underline; cursor: pointer; font-size: 13px; }
+.bkash-chip { position: fixed; left: 16px; bottom: 16px; z-index: 1150; background: #e2136e; color: #fff; border: none; border-radius: 999px; padding: 12px 18px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 24px rgba(226, 19, 110, 0.4); display: flex; align-items: center; gap: 8px; }
+.bkash-chip b { font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .bkash-body { grid-template-columns: 1fr; }
+  .bkash-qr { margin: 0 auto; }
+  .bkash-verify { flex-direction: column; }
+}
