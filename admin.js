@@ -193,6 +193,108 @@
 
 #blkAdmin .ba-note.warn { background: #fff8e1; color: #6d5200; }
 #blkAdmin #stQrPrev { width: 110px; height: 110px; object-fit: contain; background: #fff; }
+
+/* manual sales */
+#blkAdmin .ba-msline, #blkAdmin .ba-mshead { display: grid; grid-template-columns: 2fr 1fr 70px 100px 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+#blkAdmin .ba-mshead { font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+#blkAdmin .ba-msline select, #blkAdmin .ba-msline input { padding: 9px 10px; border: 1.5px solid #d1d5db; border-radius: 10px; background: #fff; width: 100%; min-width: 0; }
+#blkAdmin .ba-msline select:focus, #blkAdmin .ba-msline input:focus { outline: none; border-color: #000; }
+#blkAdmin .ba-pill.blue { background: #e7f0fd; color: #1a56b0; }
+@media (max-width: 860px) { #blkAdmin .ba-msline, #blkAdmin .ba-mshead { grid-template-columns: 1.4fr 1fr 58px 80px 36px; } }
+
+/* ---------- iPhone / small screens (built for iPhone 12: 390 x 844, notch + home bar) ---------- */
+#blkAdmin { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+#blkAdmin .ba-view { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+#blkAdmin .ba-ms-c, #blkAdmin .ms-c { display: block; margin: 0; }
+#blkAdmin .ms-c small { display: none; }
+@media (max-width: 860px) {
+  /* 16px inputs stop iOS from zooming the page when you tap a field */
+  #blkAdmin input, #blkAdmin select, #blkAdmin textarea { font-size: 16px !important; }
+  #blkAdmin .ba-shell { overflow-x: hidden; }
+
+  /* top nav row sits under the notch / status bar */
+  #blkAdmin .ba-side {
+    padding: calc(8px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px)) 8px calc(10px + env(safe-area-inset-left, 0px));
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  #blkAdmin .ba-side::-webkit-scrollbar { display: none; }
+  #blkAdmin .ba-nav button, #blkAdmin .ba-side-foot button { min-height: 44px; min-width: 44px; justify-content: center; }
+  #blkAdmin .ba-nav button { position: relative; }
+  #blkAdmin .ba-count { position: absolute; top: 2px; right: 0; margin: 0; min-width: 18px; height: 18px; font-size: 10px; }
+
+  #blkAdmin .ba-top { padding: 10px calc(14px + env(safe-area-inset-right, 0px)) 10px calc(14px + env(safe-area-inset-left, 0px)); gap: 8px; flex-wrap: nowrap; }
+  #blkAdmin .ba-top h1 { font-size: 18px; min-width: 0; }
+  #blkAdmin .ba-badge-pub { font-size: 0; padding: 0; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  #blkAdmin .ba-top .ba-btn span { display: none; }
+  #blkAdmin .ba-top .ba-btn { padding: 0 14px; flex-shrink: 0; }
+
+  #blkAdmin .ba-view { padding: 14px calc(12px + env(safe-area-inset-right, 0px)) calc(70px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px)); }
+
+  /* finger-sized buttons */
+  #blkAdmin .ba-btn { min-height: 44px; justify-content: center; }
+  #blkAdmin .ba-btn.sm { min-height: 40px; }
+  #blkAdmin .ba-x { width: 44px; height: 44px; }
+  #blkAdmin .ba-check input { width: 22px; height: 22px; }
+  #blkAdmin .ba-stat { padding: 12px 14px; }
+  #blkAdmin .ba-stat strong { font-size: 22px; }
+  #blkAdmin .ba-card { padding: 16px 14px; }
+  #blkAdmin .ba-toolbar .grow { flex-basis: 100%; }
+  #blkAdmin .ba-toolbar input[type=search], #blkAdmin .ba-toolbar select { min-width: 0; min-height: 44px; }
+  #blkAdmin .ba-addsale { order: -1; width: 100%; margin-left: 0 !important; }
+
+  /* toast clears the home-indicator bar */
+  #blkAdmin .ba-toast { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+
+  /* login screen */
+  #blkAdmin .ba-lock { overflow-y: auto; padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  #blkAdmin .ba-lock-card { margin: auto; padding: 26px 20px; }
+
+  /* pop-ups become full-screen sheets */
+  #blkAdmin .ba-modal-bg { padding: 0; align-items: stretch; -webkit-overflow-scrolling: touch; }
+  #blkAdmin .ba-modal-card { max-width: none; min-height: 100%; border-radius: 0; box-shadow: none; }
+  #blkAdmin .ba-modal-head { position: sticky; top: 0; z-index: 2; background: #fff; padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px 16px; }
+  #blkAdmin .ba-modal-body { padding: 16px calc(14px + env(safe-area-inset-right, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px)); }
+  #blkAdmin #baModal .ba-table { min-width: 0 !important; }
+  #blkAdmin #baModal .ba-table th, #blkAdmin #baModal .ba-table td { padding: 9px 8px; font-size: 13px; }
+  #blkAdmin .ba-formactions .ba-btn { flex: 1 1 140px; }
+
+  /* tables turn into cards so nothing needs sideways scrolling */
+  #blkAdmin table.ba-t-orders, #blkAdmin table.ba-t-prods, #blkAdmin table.ba-t-stack { min-width: 0 !important; display: block; }
+  #blkAdmin .ba-t-orders thead, #blkAdmin .ba-t-prods thead, #blkAdmin .ba-t-stack thead { display: none; }
+  #blkAdmin .ba-t-orders tbody, #blkAdmin .ba-t-prods tbody, #blkAdmin .ba-t-stack tbody { display: block; }
+  #blkAdmin .ba-t-orders td, #blkAdmin .ba-t-prods td, #blkAdmin .ba-t-stack td { padding: 0; border: 0; }
+
+  #blkAdmin .ba-t-orders tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 13px 14px; border-bottom: 1px solid #f0f1f3; }
+  #blkAdmin .ba-t-orders td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  #blkAdmin .ba-t-orders td:nth-child(4) { grid-column: 2; grid-row: 1; text-align: right; font-size: 16px; }
+  #blkAdmin .ba-t-orders td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  #blkAdmin .ba-t-orders td:nth-child(6) { grid-column: 2; grid-row: 2; text-align: right; }
+  #blkAdmin .ba-t-orders td:nth-child(3) { grid-column: 1; grid-row: 3; color: #6b7280; font-size: 13px; }
+  #blkAdmin .ba-t-orders td:nth-child(5) { grid-column: 2; grid-row: 3; text-align: right; font-size: 12.5px; }
+  #blkAdmin .ba-t-orders td:nth-child(7) { grid-column: 1 / -1; grid-row: 4; margin-top: 6px; }
+  #blkAdmin .ba-t-orders td:nth-child(7) .ba-btn { width: 100%; }
+  #blkAdmin .ba-t-orders td[colspan] { grid-column: 1 / -1; grid-row: auto; }
+
+  #blkAdmin .ba-t-prods tr { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; padding: 13px 14px; border-bottom: 1px solid #f0f1f3; align-items: center; }
+  #blkAdmin .ba-t-prods td:nth-child(1), #blkAdmin .ba-t-prods td:nth-child(4), #blkAdmin .ba-t-prods td:nth-child(6), #blkAdmin .ba-t-prods td[colspan] { grid-column: 1 / -1; }
+  #blkAdmin .ba-t-prods td:nth-child(3) { text-align: right; }
+  #blkAdmin .ba-t-prods .ba-actions .ba-btn { flex: 1; }
+
+  #blkAdmin .ba-t-stack tr { display: block; padding: 13px 14px; border-bottom: 1px solid #f0f1f3; }
+  #blkAdmin .ba-t-stack td { display: block; }
+  #blkAdmin .ba-t-stack td + td { margin-top: 10px; }
+  #blkAdmin .ba-stockcell input { width: 78px; min-height: 44px; }
+}
+/* manual-sale item rows on a phone: product on its own line, then size / qty / price / remove */
+@media (max-width: 600px) {
+  #blkAdmin .ba-mshead { display: none; }
+  #blkAdmin .ba-msline { grid-template-columns: 1fr 66px 94px 44px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed #e5e7eb; }
+  #blkAdmin .ba-msline .ms-c:first-child { grid-column: 1 / -1; }
+  #blkAdmin .ms-c small { display: block; font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
+  #blkAdmin .ba-msline > .ba-btn { align-self: end; padding: 0; min-height: 44px; }
+  #blkAdmin .ba-msline select, #blkAdmin .ba-msline input { min-height: 44px; }
+}
+
 `;
     function injectStyles() {
         if (document.getElementById('blkAdminStyles')) return;
@@ -238,7 +340,7 @@
     let stQr = '';
     const paidToasted = {};
     let root = null, channel = null, panelOpen = false, listening = false;
-    let ui = { tab: 'dashboard', q: '', cat: 'all', lowOnly: false, couponIdx: -1, orderFilter: 'all' };
+    let ui = { tab: 'dashboard', q: '', cat: 'all', lowOnly: false, couponIdx: -1, orderFilter: 'all', orderSrc: 'all' };
     let edImage = '', edId = null, edOrigImage = '', edOrigSig = '';
 
     function toast(msg, type) {
@@ -378,7 +480,7 @@
                     <div class="ba-top">
                         <h1 id="baTitle"></h1>
                         <span class="ba-badge-pub"><i class="fas fa-circle" style="font-size:8px"></i> Live — changes save instantly</span>
-                        <button class="ba-btn ghost" data-act="reload"><i class="fas fa-rotate"></i> Reload</button>
+                        <button class="ba-btn ghost" data-act="reload"><i class="fas fa-rotate"></i> <span>Reload</span></button>
                     </div>
                     <div class="ba-view" id="baView"><div class="ba-empty">Loading…</div></div>
                 </main>
@@ -418,7 +520,7 @@
             channel = sb().channel('blk-admin-orders')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
                     const o = payload.new || {};
-                    if (payload.eventType === 'INSERT') {
+                    if (payload.eventType === 'INSERT' && o.source !== 'manual') {
                         toast(`🛒 New order ${o.id || ''} — ${money(o.total)}${o.status === 'awaiting_payment' ? ' (waiting for bKash payment)' : ''}`, 'success');
                     } else if (payload.eventType === 'UPDATE' && o.payment_status === 'paid' && o.paid_at && Date.now() - new Date(o.paid_at).getTime() < 20000 && !paidToasted[o.id]) {
                         paidToasted[o.id] = true;
@@ -481,6 +583,7 @@
         const today = new Date().toDateString();
         const todays = orders.filter(o => o.status !== 'cancelled' && new Date(o.created_at).toDateString() === today);
         const revenue = orders.filter(o => o.status !== 'cancelled').reduce((a, o) => a + Number(o.total), 0);
+        const manualRev = orders.filter(o => o.status !== 'cancelled' && o.source === 'manual').reduce((a, o) => a + Number(o.total), 0);
         const needs = visible.map(p => ({ p, a: attention(p) })).filter(x => x.a);
 
         v.innerHTML = `
@@ -490,6 +593,7 @@
                 <div class="ba-stat"><span>Orders today</span><strong>${todays.length}</strong></div>
                 <div class="ba-stat"><span>Sales today</span><strong>${money(todays.reduce((a, o) => a + Number(o.total), 0))}</strong></div>
                 <div class="ba-stat"><span>Total sales (excl. cancelled)</span><strong>${money(revenue)}</strong></div>
+                <div class="ba-stat"><span>Manual sales (excl. cancelled)</span><strong>${money(manualRev)}</strong></div>
                 <div class="ba-stat"><span>Products live</span><strong>${visible.length}</strong></div>
                 <div class="ba-stat ${out ? 'warn' : ''}"><span>Out of stock</span><strong>${out}</strong></div>
                 <div class="ba-stat"><span>Units in stock</span><strong>${units.toLocaleString()}</strong></div>
@@ -505,7 +609,7 @@
             <div class="ba-card">
                 <h3>Needs attention</h3>
                 <p class="ba-sub">Sold-out sizes and low stock (low = ${lowAt()} or fewer). Stock is deducted automatically when a customer orders.</p>
-                ${needs.length ? `<div class="ba-tablewrap"><table class="ba-table"><tbody>
+                ${needs.length ? `<div class="ba-tablewrap"><table class="ba-table ba-t-stack"><tbody>
                     ${needs.map(({ p, a }) => `<tr><td><div class="ba-prod"><img src="${esc(p.image)}" alt=""><div><b>${esc(p.name)}</b><small>${esc(CATS[p.category] || p.category)}</small></div></div></td>
                     <td><span class="ba-pill ${a.level === 'out' ? 'red' : 'amber'}">${esc(a.text)}</span></td>
                     <td style="text-align:right"><button class="ba-btn ghost sm" data-act="tab-stock">Update stock</button></td></tr>`).join('')}
@@ -521,19 +625,25 @@
         v.innerHTML = `
             <div class="ba-toolbar">
                 ${filters.map(f => `<button class="ba-btn sm ${ui.orderFilter === f ? '' : 'ghost'}" data-act="order-filter" data-f="${f}">${f === 'all' ? 'All' : STATUS[f][0]} (${counts[f]})</button>`).join('')}
+                <select id="baSrcFilter" style="padding:7px 10px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff">
+                    <option value="all" ${ui.orderSrc === 'all' ? 'selected' : ''}>All sources</option>
+                    <option value="website" ${ui.orderSrc === 'website' ? 'selected' : ''}>Website only</option>
+                    <option value="manual" ${ui.orderSrc === 'manual' ? 'selected' : ''}>Manual only</option>
+                </select>
+                <button class="ba-btn ba-addsale" data-act="ms-open" style="margin-left:auto"><i class="fas fa-plus"></i> Add manual sale</button>
             </div>
-            <div class="ba-note" style="margin-bottom:16px">Stock is deducted the moment a customer places an order. <b>Cancel &amp; restock</b> puts the items back automatically.</div>
-            <div class="ba-tablewrap"><table class="ba-table">
+            <div class="ba-note" style="margin-bottom:16px">Stock is deducted the moment a customer places an order (or when you add a manual sale). <b>Cancel &amp; restock</b> puts the items back automatically.</div>
+            <div class="ba-tablewrap"><table class="ba-table ba-t-orders">
                 <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
                 <tbody>
                 ${(() => {
-                    const rows = orders.filter(o => ui.orderFilter === 'all' || o.status === ui.orderFilter);
+                    const rows = orders.filter(o => (ui.orderFilter === 'all' || o.status === ui.orderFilter) && (ui.orderSrc === 'all' || (o.source === 'manual' ? 'manual' : 'website') === ui.orderSrc));
                     if (!rows.length) return '<tr><td colspan="7"><div class="ba-empty">No orders here yet.</div></td></tr>';
                     return rows.map(o => {
                         const st = STATUS[o.status] || [o.status, ''];
                         const qty = (o.items || []).reduce((a, l) => a + (l.qty || 0), 0);
                         return `<tr>
-                            <td><b>${esc(o.id)}</b><br><small style="color:#9ca3af">${esc(fmtDate(o.created_at))}</small></td>
+                            <td><b>${esc(o.id)}</b><br><small style="color:#9ca3af">${esc(fmtDate(o.created_at))}</small>${o.source === 'manual' ? `<br><span class="ba-pill blue">Manual${o.channel ? ' · ' + esc(o.channel) : ''}</span>` : ''}</td>
                             <td>${esc(o.full_name)}<br><small style="color:#9ca3af">${esc(o.phone)}</small></td>
                             <td>${qty} item${qty === 1 ? '' : 's'}</td>
                             <td><b>${money(o.total)}</b></td>
@@ -557,6 +667,7 @@
                     <div class="ba-grid2" style="margin-bottom:18px">
                         <div><small style="color:#6b7280">CUSTOMER</small><br><b>${esc(o.full_name)}</b><br>${esc(o.phone)}<br>${esc(o.email || '')}</div>
                         <div><small style="color:#6b7280">DELIVER TO</small><br>${esc(o.address)}<br>${esc(o.city)}<br><small style="color:#6b7280">Payment: ${esc(String(o.payment_method).toUpperCase())}</small></div>
+                        ${o.source === 'manual' ? `<div class="ba-span2 ba-note"><b>Manual sale</b> — came from ${esc(o.channel || 'another source')}</div>` : ''}
                         ${o.notes ? `<div class="ba-span2 ba-note"><b>Note:</b> ${esc(o.notes)}</div>` : ''}
                         ${['bkash', 'nagad'].includes(o.payment_method) ? `<div class="ba-span2 ba-note ${o.payment_status === 'paid' ? '' : 'warn'}"><b>${esc(String(o.payment_method).toUpperCase())} payment:</b> ${o.payment_status === 'paid' ? `Paid ✔${o.payment_trx ? ' — TrxID <b>' + esc(o.payment_trx) + '</b>' : ''}${o.paid_at ? ' · ' + esc(fmtDate(o.paid_at)) : ''}` : (o.status === 'awaiting_payment' ? 'Waiting for the customer to pay and enter the Transaction ID.' : 'Not paid yet.')}</div>` : ''}
                     </div>
@@ -598,6 +709,145 @@
         updateNavBadge();
         renderTab(ui.tab, true);
         toast(status === 'cancelled' ? 'Order cancelled — stock put back.' : 'Order updated.', 'success');
+    }
+
+    // ---------- Manual sales (orders that came from outside the website) ----------
+    const CHANNELS = ['Facebook', 'Instagram', 'WhatsApp', 'Phone call', 'In person / Walk-in', 'Other'];
+    const PAY_METHODS = { cash: 'Cash', bkash: 'bKash', nagad: 'Nagad', bank: 'Bank transfer', other: 'Other' };
+    let msLines = [];
+
+    function openManualSale() {
+        msLines = [{ pid: '', size: '', qty: 1, price: 0 }];
+        $('#baModalHost').innerHTML = `
+            <div class="ba-modal-bg" id="baModal"><div class="ba-modal-card" id="msBox">
+                <div class="ba-modal-head"><h3>Add manual sale</h3><button class="ba-x" data-act="close-editor">✕</button></div>
+                <div class="ba-modal-body">
+                    <div class="ba-note" style="margin-bottom:16px">For orders that came from outside the website (Facebook, Instagram, WhatsApp, in person…). It is saved in the same orders list, counted in your sales totals, and the stock is deducted automatically.</div>
+                    <div class="ba-grid2">
+                        <label class="ba-f">Sale date &amp; time<input type="datetime-local" id="msDate" value="${isoToLocal(new Date().toISOString())}"></label>
+                        <label class="ba-f">Where did it come from?<select id="msChannel">${CHANNELS.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
+                        <label class="ba-f">Customer name (optional)<input type="text" id="msName" placeholder="e.g. Rahim"></label>
+                        <label class="ba-f">Phone (optional)<input type="text" id="msPhone" placeholder="017XXXXXXXX"></label>
+                        <label class="ba-f ba-span2">Address / city (optional)<input type="text" id="msAddr"></label>
+                    </div>
+                    <h3 style="margin:20px 0 8px;font-size:15px">Items sold</h3>
+                    <div class="ba-mshead"><span>Product</span><span>Size</span><span>Qty</span><span>Price each</span><span></span></div>
+                    <div id="msLines"></div>
+                    <button class="ba-btn ghost sm" data-act="ms-add-line" style="margin-top:6px"><i class="fas fa-plus"></i> Add another item</button>
+                    <div class="ba-grid2" style="margin-top:18px">
+                        <label class="ba-f">Discount given (৳)<input type="number" id="msDisc" min="0" step="1" value="0"></label>
+                        <label class="ba-f">Delivery charge (৳)<input type="number" id="msShip" min="0" step="1" value="0"></label>
+                        <label class="ba-f">Payment received by<select id="msPay">${Object.keys(PAY_METHODS).map(k => `<option value="${k}">${PAY_METHODS[k]}</option>`).join('')}</select></label>
+                        <label class="ba-f">Order status<select id="msStatus"><option value="delivered">Delivered</option><option value="confirmed">Confirmed</option><option value="shipped">Shipped</option></select></label>
+                        <label class="ba-f ba-span2">Note (optional)<input type="text" id="msNote" placeholder="e.g. paid advance, bKash TrxID, etc."></label>
+                    </div>
+                    <div id="msTotals" style="text-align:right;margin:16px 2px 0;line-height:1.9"></div>
+                    <div class="ba-formactions">
+                        <button class="ba-btn green" data-act="ms-save"><i class="fas fa-check"></i> Save sale</button>
+                        <button class="ba-btn ghost" data-act="close-editor">Cancel</button>
+                    </div>
+                </div></div></div>`;
+        renderMsLines();
+    }
+
+    function renderMsLines() {
+        const box = $('#msLines');
+        if (!box) return;
+        box.innerHTML = msLines.map((l, i) => {
+            const p = S.products.find(x => x.id === l.pid);
+            const sk = p && p.sizes && Object.keys(p.sizes).length ? sizeKeys(p.sizes) : null;
+            return `<div class="ba-msline" data-i="${i}">
+                <label class="ms-c"><small>Product</small><select class="ms-prod"><option value="">Choose product…</option>${S.products.map(x => `<option value="${esc(x.id)}" ${x.id === l.pid ? 'selected' : ''}>${esc(x.name)}${x.active === false ? ' (hidden)' : ''}</option>`).join('')}</select></label>
+                <label class="ms-c"><small>Size</small><select class="ms-size" ${sk ? '' : 'disabled'}>${sk ? '<option value="">Size…</option>' + sk.map(k => `<option value="${esc(k)}" ${k === l.size ? 'selected' : ''}>${esc(k)} (${parseInt(p.sizes[k]) || 0} left)</option>`).join('') : '<option value="">—</option>'}</select></label>
+                <label class="ms-c"><small>Qty</small><input type="number" class="ms-qty" min="1" step="1" value="${l.qty}"></label>
+                <label class="ms-c"><small>Price each</small><input type="number" class="ms-price" min="0" step="1" value="${l.price}"></label>
+                <button class="ba-btn danger sm" data-act="ms-del-line" data-i="${i}" ${msLines.length === 1 ? 'disabled' : ''}>✕</button>
+            </div>`;
+        }).join('');
+        msTotals();
+    }
+
+    function msCalc() {
+        const num = (id) => Math.max(0, Number($(id) && $(id).value) || 0);
+        const sub = msLines.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
+        const disc = num('#msDisc'), ship = num('#msShip');
+        return { sub, disc, ship, total: Math.max(0, sub - disc + ship) };
+    }
+    function msTotals() {
+        const el = $('#msTotals');
+        if (!el) return;
+        const t = msCalc();
+        el.innerHTML = `Subtotal: <b>${money(t.sub)}</b><br>${t.disc ? `Discount: <b>-${money(t.disc)}</b><br>` : ''}${t.ship ? `Delivery: <b>${money(t.ship)}</b><br>` : ''}<span style="font-size:18px">Total: <b>${money(t.total)}</b></span>`;
+    }
+    function msInput(t) {
+        const row = t.closest('.ba-msline');
+        if (row) {
+            const l = msLines[Number(row.dataset.i)];
+            if (t.classList.contains('ms-qty')) l.qty = parseInt(t.value) || 0;
+            else if (t.classList.contains('ms-price')) l.price = Number(t.value) || 0;
+        }
+        msTotals();
+    }
+    function msChange(t) {
+        const row = t.closest('.ba-msline');
+        if (!row) return;
+        const l = msLines[Number(row.dataset.i)];
+        if (t.classList.contains('ms-prod')) {
+            l.pid = t.value; l.size = '';
+            const p = S.products.find(x => x.id === l.pid);
+            l.price = p ? window.computePricing(p).price : 0;
+            renderMsLines();
+        } else if (t.classList.contains('ms-size')) {
+            l.size = t.value;
+        }
+    }
+
+    async function saveManualSale() {
+        try { await pullStore(); } catch (e) { /* use what we have */ }
+        const items = [], need = {};
+        for (const l of msLines) {
+            const p = S.products.find(x => x.id === l.pid);
+            if (!p) { toast('Choose a product for every item row.', 'error'); return; }
+            const sized = p.sizes && Object.keys(p.sizes).length;
+            if (sized && !l.size) { toast(`Choose a size for ${p.name}.`, 'error'); return; }
+            const qty = parseInt(l.qty), price = Number(l.price);
+            if (!(qty >= 1)) { toast(`Enter a quantity for ${p.name}.`, 'error'); return; }
+            if (!(price >= 0)) { toast(`Enter the price for ${p.name}.`, 'error'); return; }
+            items.push({ id: p.id, size: sized ? l.size : null, qty, unit_price: price });
+            const key = p.id + '|' + (sized ? l.size : '');
+            need[key] = (need[key] || 0) + qty;
+        }
+        // stock check (warn, but let the owner override — their count may simply be out of date)
+        let oversell = false;
+        for (const key of Object.keys(need)) {
+            const [pid, size] = key.split('|');
+            const p = S.products.find(x => x.id === pid);
+            const have = size ? (parseInt(p.sizes[size]) || 0) : (parseInt(p.stock) || 0);
+            if (need[key] > have) {
+                if (!confirm(`${p.name}${size ? ' (' + size + ')' : ''}: only ${have} in stock but you are selling ${need[key]}.\nSave anyway? Stock will be set to 0.`)) return;
+                oversell = true;
+            }
+        }
+
+        const t = msCalc();
+        const sale = {
+            created_at: $('#msDate').value ? localToIso($('#msDate').value) : new Date().toISOString(),
+            channel: $('#msChannel').value,
+            full_name: $('#msName').value.trim(), phone: $('#msPhone').value.trim(), address: $('#msAddr').value.trim(),
+            notes: $('#msNote').value.trim(), payment_method: $('#msPay').value, status: $('#msStatus').value,
+            discount: t.disc, shipping: t.ship, allow_oversell: oversell
+        };
+        const btn = $('[data-act="ms-save"]');
+        if (btn) btn.disabled = true;
+        // one database call does everything at once: checks + deducts stock and saves the order (all-or-nothing)
+        const r = await run(sb().rpc('admin_add_manual_sale', { p_sale: sale, p_items: items }));
+        if (!r) { if (btn) btn.disabled = false; return; }
+
+        closeEditor();
+        await Promise.all([pullOrders(), afterWrite()]);
+        updateNavBadge();
+        renderTab(ui.tab, true);
+        toast(`Manual sale ${(r.data && r.data.id) || ''} saved — stock updated.`, 'success');
     }
 
     // ---------- bKash payments ----------
@@ -659,7 +909,7 @@
                 <button class="ba-btn" data-act="add-product"><i class="fas fa-plus"></i> Add product</button>
             </div>
             <div class="ba-tablewrap">
-                <table class="ba-table">
+                <table class="ba-table ba-t-prods">
                     <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr></thead>
                     <tbody id="baProdBody"></tbody>
                 </table>
@@ -907,7 +1157,7 @@
                 <label class="ba-check"><input type="checkbox" id="baLowOnly" ${ui.lowOnly ? 'checked' : ''}> Only low / sold-out</label>
             </div>
             <div class="ba-note" style="margin-bottom:16px">Change a number and press <b>Tab</b> or click outside — it saves instantly and shoppers see it live. Customer orders deduct from these numbers automatically.</div>
-            <div class="ba-tablewrap"><table class="ba-table"><thead><tr><th style="width:34%">Product</th><th>Stock</th></tr></thead><tbody id="baStockBody"></tbody></table></div>`;
+            <div class="ba-tablewrap"><table class="ba-table ba-t-stack"><thead><tr><th style="width:34%">Product</th><th>Stock</th></tr></thead><tbody id="baStockBody"></tbody></table></div>`;
         drawStockRows();
     }
 
@@ -1180,6 +1430,10 @@
             if (!confirm('Cancel this order and put the items back in stock?')) return;
             setOrderStatus(b.dataset.id, 'cancelled');
         },
+        'ms-open': () => openManualSale(),
+        'ms-add-line': () => { msLines.push({ pid: '', size: '', qty: 1, price: 0 }); renderMsLines(); },
+        'ms-del-line': (b) => { if (msLines.length > 1) { msLines.splice(Number(b.dataset.i), 1); renderMsLines(); } },
+        'ms-save': () => saveManualSale(),
         'save-sale': () => saveSale(),
         'coupon-save': () => saveCoupon(),
         'coupon-edit': (b) => { ui.couponIdx = Number(b.dataset.i); renderOffers($('#baView')); $('#baView').scrollTop = 99999; },
@@ -1215,12 +1469,15 @@
             const t = e.target;
             if (t.id === 'baSearch') { ui.q = t.value; drawProductRows(); }
             else if (t.id === 'baStockSearch') { ui.q = t.value; drawStockRows(); }
+            else if (t.closest && t.closest('#msBox')) msInput(t);
             else if (t.id === 'peImgUrl') { edImage = t.value.trim(); $('#pePrev').src = edImage; }
             else if (['pePrice', 'peDVal'].includes(t.id)) updatePreview();
         });
         root.addEventListener('change', async (e) => {
             const t = e.target;
             if (t.id === 'baCatFilter') { ui.cat = t.value; drawProductRows(); }
+            else if (t.id === 'baSrcFilter') { ui.orderSrc = t.value; renderOrders($('#baView')); }
+            else if (t.classList.contains('ms-prod') || t.classList.contains('ms-size')) msChange(t);
             else if (t.id === 'baLowOnly') { ui.lowOnly = t.checked; drawStockRows(); }
             else if (t.id === 'peCat' || t.id === 'peDType') updatePreview();
             else if (t.name === 'peMode') {
